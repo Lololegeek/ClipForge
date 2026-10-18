@@ -1,0 +1,63 @@
+# Downloaded and generated dependencies
+/.deps/
+/_deps/
+/vcpkg_installed/
+/.cache/
+
+# CMake, Ninja and compiler output
+/build/
+/out/
+/cmake-build-*/
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/build.ninja
+/compile_commands.json
+/Testing/
+
+# Packaged binaries and local test artifacts
+/dist/
+/artifacts/
+/artifacts-*
+/aqtinstall.log
+
+# Visual Studio and Qt Creator user state
+/.vs/
+/.qtc_clangd/
+/Debug/
+/Release/
+/x64/
+/Win32/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+*.VC.db
+*.VC.VC.opendb
+CMakeUserPresets.json
+CMakeLists.txt.user
+*.pro.user*
+*.qbs.user
+*.opensdf
+*.sdf
+*.ipch/
+ipch/
+
+# Intermediate compiler files and diagnostics
+*.obj
+*.pch
+*.pdb
+*.ilk
+*.idb
+*.tlog/
+*.lastbuildstate
+*.dmp
+*.stackdump
+
+# Windows and editor noise
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
