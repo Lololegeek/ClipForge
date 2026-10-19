@@ -17,6 +17,7 @@ args = parser.parse_args()
 report = {"files": [], "checks": []}
 files = sorted((args.folder / "clips").glob("*"))
 assert len(files) >= 3, f"Expected two replays and one recording, got {len(files)}"
+assert sum(p.name.startswith("Replay") for p in files) == 2, "Expected two replays after three requests (one rapid repeat suppressed)"
 assert len({p.name for p in files}) == len(files)
 for path in files:
     data = json.loads(subprocess.check_output([

@@ -52,3 +52,15 @@ The website passed TypeScript, ESLint and the production static build. Browser c
 Fixed the Qt resource filename used by QIcon (`:/assets/ClipForge.ico`) and explicitly assigned it to the QQuickWindow. The process and installed shortcuts share the ClipForge.Desktop AppUserModelID. Start menu, desktop and startup shortcuts use the installed ClipForge.ico file. CMake now tracks the ICO file as a dependency of the Windows resource so branding changes rebuild the executable's icon.
 
 Verified the installed executable contains seven native icon sizes. Both ExtractAssociatedIcon (Windows shell) and WM_GETICON on the actual running installed QQuickWindow return the website logo. Captured evidence remains local in artifacts/live-window-icon.png and artifacts/fixed-shell-icon.png. The installed Start menu shortcut was updated and Windows received a shell-change notification.
+
+## Release 0.2.0 checks, 19 October 2026
+
+MSVC release build and version resources: 0.2.0. Core QtTest: 7 passed, 0 failed. Media QtTest: 7 passed, 0 failed, including playback frames, audio processing, seeking/rate changes, hotkeys and an actual multi-segment export.
+
+A 32-second isolated WGC fixture run produced two H.264/AAC MP4 replays and one MKV recording. Three save requests include a rapid 200 ms repeat: that repeat is suppressed, while a later request after the 1.5-second cooldown succeeds. Full decoding, timestamps, dimensions and FPS passed; rendering lag: 0 frames in this run. This is file/pipeline validation, not proof of real-game capture fidelity or exclusive-fullscreen overlay behavior.
+
+The six-page QML smoke test passed with edited settings surviving refresh. The native editor check passed with an advancing playback position and a valid QVideoSink frame. Five public website screenshots were refreshed from the running 0.2.0 application, using the same credited imported sample video and isolated test data. The games-page capture stays private.
+
+The capture harness now waits for the hotkey cooldown before its second accepted save; its validator requires exactly two replays. The PowerShell media-report argument was corrected to pass one output filename/format argument to QtTest. No changes were made to the installed user's application, settings or clips for these checks. Runtime update installation, startup-registry toggling, real games, exclusive fullscreen, a clean VM and Windows 10 were not exercised for this release.
+
+Release artifacts built: installer 185114161 bytes, portable ZIP 252874214 bytes. Installer version resources are 0.2.0. The portable ZIP passed 7-Zip integrity checking and excludes development executables and the obsolete ClipForge-Fixed.exe. The regenerated installer was not installed over the user's active app during publication.

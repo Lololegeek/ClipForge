@@ -202,7 +202,7 @@ export function LimitsSection() {
         encore là.
       </SectionTitle>
       <p className="text-muted mt-6 max-w-xl text-lg">
-        ClipForge en est à la version 0.1. Voilà, sans arrondir, ce qui est vérifié et ce qui ne
+        ClipForge en est à la version 0.2. Voilà, sans arrondir, ce qui est vérifié et ce qui ne
         l’est pas.
       </p>
       <div className="mt-14 grid gap-12 lg:grid-cols-[5fr_7fr] lg:gap-20">
@@ -229,7 +229,7 @@ export function LimitsSection() {
             {[
               "NVENC, QSV, HEVC et AV1 sur d’autres cartes graphiques",
               "Comportement avec de vrais jeux et leurs anti-triche",
-              "Pas d’overlay en jeu ; F10 capture le bureau, pas l’image du jeu",
+              "Overlay de notifications : plein écran exclusif non vérifié ; F10 capture le bureau",
               "Exports toujours réencodés, sans texte, sous-titres ni transitions",
               "Replay uniquement en RAM, pas sur disque",
               "Windows 10 et machine vierge : vérifications de publication à faire",

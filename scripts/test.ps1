@@ -20,7 +20,7 @@ if($Capture -or $WindowCapture){
  if($LASTEXITCODE){throw 'Media validation failed.'}
  $env:CLIPFORGE_TEST_VIDEO=(Get-ChildItem "$data/clips" -Filter '*.mp4'|Select-Object -First 1).FullName
  $env:CLIPFORGE_TEST_OUTPUT=Join-Path $data 'export.mp4'
- if(!$FullHD){& ./dist/ClipForge/media_tests.exe -o "$data/media-tests.txt",txt}
+ if(!$FullHD){& ./dist/ClipForge/media_tests.exe -o "$data/media-tests.txt,txt"}
  if($LASTEXITCODE){throw 'Media integration tests failed.'}
 }
 Write-Host 'Requested checks passed.'

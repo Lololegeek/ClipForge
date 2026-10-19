@@ -1,14 +1,14 @@
 {
-  "tag_name": "v0.1.1",
-  "name": "ClipForge 0.1.1",
-  "html_url": "https://github.com/Lololegeek/ClipForge/releases/tag/v0.1.1",
+  "tag_name": "v0.2.0",
+  "name": "ClipForge 0.2.0",
+  "html_url": "https://github.com/Lololegeek/ClipForge/releases/tag/v0.2.0",
   "published_at": null,
   "prerelease": false,
   "assets": [
     {
       "name": "ClipForge-Setup-x64.exe",
-      "size": 233924200,
-      "browser_download_url": "https://github.com/Lololegeek/ClipForge/releases/download/v0.1.1/ClipForge-Setup-x64.exe"
+      "size": 185114161,
+      "browser_download_url": "https://github.com/Lololegeek/ClipForge/releases/download/v0.2.0/ClipForge-Setup-x64.exe"
     }
   ]
 }

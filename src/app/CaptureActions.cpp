@@ -154,6 +154,8 @@ void Controller::runSelfTest() {
     start();
     QTimer::singleShot(duration - 14000, this, &Controller::saveReplay);
     QTimer::singleShot(duration - 13800, this, &Controller::saveReplay);
+    // Exercise the rapid-keypress guard, then save again after its cooldown.
+    QTimer::singleShot(duration - 12000, this, &Controller::saveReplay);
     QTimer::singleShot(duration - 10000, this, &Controller::toggleRecording);
     QTimer::singleShot(duration - 5000, this, &Controller::toggleRecording);
     QTimer::singleShot(duration - 3000, this, &Controller::stop);

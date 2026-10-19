@@ -35,7 +35,7 @@ Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 Name: "desktopicon"; Description: "Créer un raccourci sur le bureau"; Flags: unchecked
 Name: "startup"; Description: "Démarrer ClipForge dans la zone de notification à l'ouverture de session"; Flags: unchecked
 [Files]
-Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "core_tests.exe,media_tests.exe,ClipForgeFixture.exe,Qt6Test.dll,qoffscreen.dll,*.pdb"
+Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "core_tests.exe,media_tests.exe,ClipForgeFixture.exe,ClipForge-Fixed.exe,Qt6Test.dll,qoffscreen.dll,*.pdb"
 [Icons]
 Name: "{group}\ClipForge"; Filename: "{app}\ClipForge.exe"; IconFilename: "{app}\ClipForge.ico"; AppUserModelID: "ClipForge.Desktop"
 Name: "{autodesktop}\ClipForge"; Filename: "{app}\ClipForge.exe"; IconFilename: "{app}\ClipForge.ico"; AppUserModelID: "ClipForge.Desktop"; Tasks: desktopicon
