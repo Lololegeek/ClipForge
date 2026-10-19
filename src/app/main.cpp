@@ -6,7 +6,11 @@
 #include <QFile>
 #include <QFont>
 #include <QIcon>
+#include <QCryptographicHash>
+#include <QLocalServer>
+#include <QLocalSocket>
 #include <QLockFile>
+#include <QMessageBox>
 #include <QMutex>
 #include <QMutexLocker>
 #include <QProcess>
@@ -18,7 +22,9 @@
 #include <QTimer>
 #include <QVideoSink>
 #include <QVideoFrame>
+#include <chrono>
 #include <cstdarg>
+#include <thread>
 #include <objbase.h>
 #include <shobjidl_core.h>
 #include <windows.h>
@@ -64,8 +70,35 @@ int main(int argc, char **argv) {
         argument("--data-dir", QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
     QDir().mkpath(data);
     QLockFile lock(data + "/instance.lock");
-    if (!lock.tryLock(0))
-        return 2;
+    const QString pipe = "ClipForge-" + QCryptographicHash::hash(QDir::cleanPath(data).toUtf8(), QCryptographicHash::Sha1).toHex().left(16);
+    if (!lock.tryLock(0)) {
+        // Another instance owns the data directory: ask it to show its window instead of exiting silently.
+        for (int i = 0; i < 10; ++i) {
+            QLocalSocket socket;
+            socket.connectToServer(pipe);
+            if (socket.waitForConnected(500)) {
+                socket.write("show");
+                socket.waitForBytesWritten(1000);
+                return 0;
+            }
+            QThread::msleep(300);
+            if (lock.tryLock(0))
+                break;
+        }
+        if (!lock.isLocked()) {
+            QMessageBox::warning(nullptr, "ClipForge",
+                                 "ClipForge est déjà en cours d'exécution ou n'a pas fini de se fermer.\n"
+                                 "Patientez quelques secondes ou terminez ClipForge.exe dans le Gestionnaire des tâches.");
+            return 2;
+        }
+    }
+    // Quitting must always end the process: if OBS shutdown hangs, kill ourselves after a grace period.
+    QObject::connect(&app, &QApplication::aboutToQuit, &app, [] {
+        std::thread([] {
+            std::this_thread::sleep_for(std::chrono::seconds(10));
+            TerminateProcess(GetCurrentProcess(), 0);
+        }).detach();
+    });
     logfile.setFileName(data + "/clipforge.log");
     if (logfile.size() > 8 * 1024 * 1024) {
         QFile::remove(data + "/clipforge.previous.log");
@@ -89,6 +122,15 @@ int main(int argc, char **argv) {
             QThread::msleep(300);
         }
         cf::Controller controller(runtime, data, dir + "/tools", test);
+        QLocalServer::removeServer(pipe);
+        QLocalServer instanceServer;
+        instanceServer.listen(pipe);
+        QObject::connect(&instanceServer, &QLocalServer::newConnection, &controller, [&] {
+            while (auto client = instanceServer.nextPendingConnection()) {
+                client->deleteLater();
+                emit controller.showWindow();
+            }
+        });
         QQmlApplicationEngine engine;
         engine.rootContext()->setContextProperty("appController", &controller);
         engine.rootContext()->setContextProperty("clipLibrary", controller.library());

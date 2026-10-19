@@ -20,7 +20,7 @@
 namespace cf {
 Controller::Controller(QString runtime, QString data, QString tools, bool test)
     : data_(data), settings_(Settings::load(data + "/settings.json")), library_(data + "/library.sqlite"),
-      jobs_(tools, data + "/thumbnails"), engine_(new ObsEngine(runtime, data + "/obs")), test_(test) {
+      jobs_(tools, data + "/thumbnails"), updater_(data), engine_(new ObsEngine(runtime, data + "/obs")), test_(test) {
     qRegisterMetaType<Settings>();
     if (test_) {
         settings_.clips = data_ + "/clips";
@@ -104,6 +104,18 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
         auto error = hotkeys_.configure(settings_.saveKey, settings_.recordKey, settings_.screenshotKey);
         if (!error.isEmpty())
             notify(error, true);
+        connect(&updater_, &Updater::changed, this, &Controller::changed);
+        connect(&updater_, &Updater::message, this, &Controller::notify);
+        updateTimer_.setInterval(6 * 3600 * 1000);
+        connect(&updateTimer_, &QTimer::timeout, this, [this] {
+            if (settings_.autoUpdate)
+                updater_.check(false, true);
+        });
+        updateTimer_.start();
+        QTimer::singleShot(20000, this, [this] {
+            if (settings_.autoUpdate)
+                updater_.check(false, true);
+        });
         detection_.setInterval(2500);
         connect(&detection_, &QTimer::timeout, this, &Controller::detect);
         detection_.start();

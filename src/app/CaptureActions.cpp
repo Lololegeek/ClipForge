@@ -78,14 +78,27 @@ void Controller::quit() {
         notify("Attendez la fin de la sauvegarde ou de l'export avant de quitter.", true);
         return;
     }
-    if (state_ != "Idle" && state_ != "Error") {
+    // Never wait forever for the engine to go idle: a stuck state must not keep the process alive.
+    if (state_ != "Idle" && state_ != "Error" && quitAttempts_++ < 15) {
         stop();
         QTimer::singleShot(400, this, &Controller::quit);
         return;
     }
     quitting_ = true;
     emit changed();
+    updater_.launchInstaller();
     QApplication::quit();
+}
+void Controller::checkForUpdates() {
+    updater_.check(true, false);
+}
+void Controller::installUpdate() {
+    if (updater_.state() == "available")
+        updater_.downloadNow();
+    else if (updater_.ready())
+        quit();
+    else
+        updater_.check(true, true);
 }
 void Controller::runSelfTest() {
     int duration = 32000;

@@ -9,7 +9,7 @@ set(CMAKE_AUTOMOC ON)
 if(NOT MSVC OR NOT WIN32)
   message(FATAL_ERROR "ClipForge requires Windows x64 and MSVC")
 endif()
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Widgets Quick QuickControls2 Multimedia Sql Test)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Widgets Quick QuickControls2 Multimedia Network Sql Test)
 set(OBS_ROOT "${CMAKE_SOURCE_DIR}/.deps/obs" CACHE PATH "OBS portable runtime")
 set(OBS_SOURCE "${CMAKE_SOURCE_DIR}/.deps/obs-source/obs-studio-32.2.2-sources" CACHE PATH "Matching OBS source")
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/obs-include")
@@ -31,12 +31,12 @@ add_library(clipforge_core STATIC
 target_include_directories(clipforge_core PUBLIC src)
 target_link_libraries(clipforge_core PUBLIC Qt6::Core Qt6::Gui Qt6::Sql Qt6::Multimedia obs user32 shell32 psapi ole32)
 qt_add_executable(ClipForge WIN32 src/app/main.cpp src/app/Controller.cpp src/app/Controller.h
- src/app/CaptureActions.cpp src/app/LibraryActions.cpp src/app/EditActions.cpp src/app/GameProfiles.cpp)
+ src/app/Updater.cpp src/app/Updater.h src/app/CaptureActions.cpp src/app/LibraryActions.cpp src/app/EditActions.cpp src/app/GameProfiles.cpp)
 configure_file(packaging/windows.rc.in "${CMAKE_BINARY_DIR}/windows.rc" @ONLY)
 set_source_files_properties("${CMAKE_BINARY_DIR}/windows.rc" PROPERTIES
   OBJECT_DEPENDS "${CMAKE_SOURCE_DIR}/assets/ClipForge.ico")
 target_sources(ClipForge PRIVATE "${CMAKE_BINARY_DIR}/windows.rc")
-target_link_libraries(ClipForge PRIVATE clipforge_core Qt6::Widgets Qt6::Quick Qt6::QuickControls2 Qt6::Multimedia)
+target_link_libraries(ClipForge PRIVATE clipforge_core Qt6::Widgets Qt6::Quick Qt6::QuickControls2 Qt6::Multimedia Qt6::Network)
 qt_add_resources(ClipForge ui PREFIX "/" FILES
  ui/App.qml ui/theme/Theme.qml ui/theme/qmldir
  ui/components/ActionButton.qml ui/components/Panel.qml ui/components/CField.qml ui/components/CCombo.qml ui/components/CSlider.qml

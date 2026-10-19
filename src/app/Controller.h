@@ -2,6 +2,7 @@
 #include "capture/ObsEngine.h"
 #include "export/MediaJobs.h"
 #include "hotkeys/GlobalHotkeys.h"
+#include "Updater.h"
 #include "library/ClipModel.h"
 #include <QJsonArray>
 #include <QObject>
@@ -31,6 +32,9 @@ class Controller : public QObject {
     Q_PROPERTY(bool exportBusy READ exportBusy NOTIFY changed)
     Q_PROPERTY(double exportProgress READ exportProgress NOTIFY changed)
     Q_PROPERTY(QString lastClip READ lastClip NOTIFY changed)
+    Q_PROPERTY(QString updateState READ updateState NOTIFY changed)
+    Q_PROPERTY(QString updateVersion READ updateVersion NOTIFY changed)
+    Q_PROPERTY(double updateProgress READ updateProgress NOTIFY changed)
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY editChanged)
     Q_PROPERTY(bool canRedo READ canRedo NOTIFY editChanged)
   public:
@@ -91,6 +95,15 @@ class Controller : public QObject {
     QString lastClip() const {
         return lastClip_;
     }
+    QString updateState() const {
+        return updater_.state();
+    }
+    QString updateVersion() const {
+        return updater_.version();
+    }
+    double updateProgress() const {
+        return updater_.progress();
+    }
     bool canUndo() const {
         return !undo_.isEmpty();
     }
@@ -125,6 +138,8 @@ class Controller : public QObject {
     Q_INVOKABLE void configurationFile(bool importing);
     Q_INVOKABLE void chooseClipsFolder();
     Q_INVOKABLE void quit();
+    Q_INVOKABLE void checkForUpdates();
+    Q_INVOKABLE void installUpdate();
     void runSelfTest();
     bool allowClose() const;
     void notify(QString text, bool error = false);
@@ -143,10 +158,12 @@ class Controller : public QObject {
     ClipModel library_;
     MediaJobs jobs_;
     GlobalHotkeys hotkeys_;
+    Updater updater_;
     ObsEngine *engine_;
     QThread worker_;
     QSystemTrayIcon *tray_ = nullptr;
-    QTimer detection_;
+    QTimer detection_, updateTimer_;
+    int quitAttempts_ = 0;
     bool ready_ = false, recording_ = false, test_ = false, quitting_ = false, autoStarted_ = false;
     QVariantMap metrics_, selected_;
     QVariantList encoders_, targets_, microphones_, games_;

@@ -41,4 +41,11 @@ Name: "{group}\ClipForge"; Filename: "{app}\ClipForge.exe"; IconFilename: "{app}
 Name: "{autodesktop}\ClipForge"; Filename: "{app}\ClipForge.exe"; IconFilename: "{app}\ClipForge.ico"; AppUserModelID: "ClipForge.Desktop"; Tasks: desktopicon
 Name: "{userstartup}\ClipForge"; Filename: "{app}\ClipForge.exe"; IconFilename: "{app}\ClipForge.ico"; Parameters: "--headless"; Tasks: startup
 [Run]
+Filename: "{app}\ClipForge.exe"; Parameters: "--headless"; Flags: nowait; Check: Relaunch
 Filename: "{app}\ClipForge.exe"; Description: "Lancer ClipForge"; Flags: nowait postinstall skipifsilent unchecked
+
+[Code]
+function Relaunch: Boolean;
+begin
+  Result := ExpandConstant('{param:relaunch|0}') = '1';
+end;

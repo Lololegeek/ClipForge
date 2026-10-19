@@ -39,6 +39,7 @@ QJsonObject Settings::json() const {
     STR(autoCapture);
     STR(startMinimized);
     STR(overlay);
+    STR(autoUpdate);
     STR(profiles);
 #undef STR
     return o;
@@ -75,6 +76,7 @@ Settings Settings::fromJson(const QJsonObject &o) {
     B(autoCapture);
     B(startMinimized);
     B(overlay);
+    B(autoUpdate);
     if (o.contains("profiles"))
         s.profiles = o["profiles"].toObject();
     if (o.contains("systemVolume"))

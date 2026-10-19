@@ -66,6 +66,7 @@ ColumnLayout {
         draft.closeToTray = closeTray.checked;
         draft.autoCapture = automatic.checked;
         draft.startMinimized = minimized.checked;
+        draft.autoUpdate = autoUpdate.checked;
         draft.saveKey = saveKey.model[saveKey.currentIndex].value;
         draft.recordKey = recordKey.model[recordKey.currentIndex].value;
         draft.screenshotKey = shotKey.model[shotKey.currentIndex].value;
@@ -451,6 +452,22 @@ ColumnLayout {
                 id: minimized
                 text: "Démarrer avec la fenêtre masquée"
                 checked: settings.draft.startMinimized
+            }
+            CheckBox {
+                id: autoUpdate
+                text: "Télécharger automatiquement les mises à jour"
+                checked: settings.draft.autoUpdate
+            }
+            RowLayout {
+                spacing: 10
+                ActionButton {
+                    text: appController.updateState === "available" ? "Télécharger " + appController.updateVersion
+                        : appController.updateState === "ready" ? "Redémarrer et installer " + appController.updateVersion
+                        : appController.updateState === "downloading" ? "Téléchargement " + Math.round(appController.updateProgress * 100) + " %"
+                        : "Rechercher une mise à jour"
+                    enabled: appController.updateState !== "checking" && appController.updateState !== "downloading"
+                    onClicked: appController.updateState === "idle" ? appController.checkForUpdates() : appController.installUpdate()
+                }
             }
             Text {
                 Layout.fillWidth: true
