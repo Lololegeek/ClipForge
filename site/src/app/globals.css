@@ -1,0 +1,245 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Thème clair (le thème sombre est l'identité du produit : voir .dark) */
+:root {
+  --canvas: #f6f6fb;
+  --nav: #ecedf6;
+  --surface: #ffffff;
+  --raised: #eff0f9;
+  --line: #d8dae9;
+  --accent: #5a5ad4;
+  --accent-ink: #ffffff;
+  --accent-surface: #e4e4fa;
+  --ink: #14151f;
+  --muted: #555971;
+  --ok: #1d8660;
+  --warn: #8f6211;
+  color-scheme: light;
+}
+
+.dark,
+.app-dark {
+  --canvas: #101119;
+  --nav: #171822;
+  --surface: #20222f;
+  --raised: #292c3c;
+  --line: #36394d;
+  --accent: #8c8cff;
+  --accent-ink: #101119;
+  --accent-surface: #30304c;
+  --ink: #f0f1fa;
+  --muted: #b0b3c8;
+  --ok: #81d9b1;
+  --warn: #e5b87a;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-nav: var(--nav);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-surface: var(--accent-surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --font-sans: "Schibsted Grotesk Variable", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", Consolas, ui-monospace, monospace;
+}
+
+html {
+  scroll-padding-top: 5.5rem;
+  background: var(--canvas);
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Lenis */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* Défilement des repères de la règle */
+@keyframes ruler-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes land {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--ok) 55%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
+@keyframes shot-flash {
+  from {
+    opacity: 0.85;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Markdown rendu depuis les docs du dépôt */
+.prose-cf h1 {
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+.prose-cf h2 {
+  font-size: 1.5rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  margin: 2.5rem 0 1rem;
+}
+.prose-cf p {
+  color: var(--muted);
+  max-width: 68ch;
+  margin-bottom: 1rem;
+}
+.prose-cf a {
+  color: var(--accent);
+  text-underline-offset: 3px;
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(in oklab, var(--accent) 40%, transparent);
+}
+.prose-cf ul {
+  list-style: none;
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.prose-cf li {
+  position: relative;
+  padding-left: 1.25rem;
+  color: var(--muted);
+  max-width: 68ch;
+}
+.prose-cf li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.8em;
+  width: 8px;
+  height: 2px;
+  background: var(--line);
+}
+.prose-cf code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  padding: 0.1em 0.4em;
+  border-radius: 5px;
+  color: var(--ink);
+}
+.prose-cf strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.prose-cf table {
+  width: 100%;
+  min-width: 44rem;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+.prose-cf th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+.prose-cf td {
+  vertical-align: top;
+  padding: 1rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+.prose-cf td:first-child {
+  color: var(--ink);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.prose-cf blockquote {
+  border-left: 2px solid var(--accent);
+  padding-left: 1rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
