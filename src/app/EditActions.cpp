@@ -82,6 +82,7 @@ void Controller::exportClip(int height, int fps, QString codec, double volume) {
     auto project = project_;
     project.volume = volume;
     progress_ = 0;
+    lastExport_.clear();
     jobs_.exportVideo(project, dest, height, fps, codec);
 }
 void Controller::saveProject() {

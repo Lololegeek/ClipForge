@@ -40,6 +40,7 @@ class ClipModel : public QAbstractListModel {
     void upsert(const QVariantMap &);
     void setThumbnail(QString path, QString image);
     void reload();
+    QHash<QString, qint64> knownFiles() const;
   signals:
     void countChanged();
     void failure(QString message);
@@ -51,5 +52,8 @@ class ClipModel : public QAbstractListModel {
     bool favorites_ = false;
     int total_ = 0;
     QString where() const;
+    QString pattern() const;
+    int rowOf(int id) const;
+    void patch(int row, const QVariantMap &values, const QList<int> &roles);
 };
 } // namespace cf

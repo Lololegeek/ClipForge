@@ -73,14 +73,41 @@ QVariant ClipModel::data(const QModelIndex &i, int r) const {
     case Tags:
         return v["tags"];
     case Missing:
-        return !QFileInfo::exists(v["path"].toString());
+        return v["missing"];
     default:
         return {};
     }
 }
 QString ClipModel::where() const {
-    return " WHERE (name LIKE :search OR game LIKE :search OR tags LIKE :search)" +
+    return " WHERE (name LIKE :search ESCAPE '!' OR game LIKE :search ESCAPE '!' OR tags LIKE :search ESCAPE '!')" +
            QString(favorites_ ? " AND favorite=1" : "");
+}
+QString ClipModel::pattern() const {
+    // Typed % and _ are literal characters, not SQL wildcards.
+    auto s = search_;
+    s.replace("!", "!!").replace("%", "!%").replace("_", "!_");
+    return "%" + s + "%";
+}
+int ClipModel::rowOf(int id) const {
+    for (int i = 0; i < rows_.size(); ++i)
+        if (rows_[i]["id"].toInt() == id)
+            return i;
+    return -1;
+}
+void ClipModel::patch(int row, const QVariantMap &values, const QList<int> &roles) {
+    if (row < 0 || row >= rows_.size())
+        return;
+    for (auto it = values.begin(); it != values.end(); ++it)
+        rows_[row][it.key()] = it.value();
+    emit dataChanged(index(row), index(row), roles);
+}
+QHash<QString, qint64> ClipModel::knownFiles() const {
+    QHash<QString, qint64> known;
+    QSqlQuery q(db_);
+    if (q.exec("SELECT path,size FROM clips WHERE thumbnail IS NOT NULL AND thumbnail<>''"))
+        while (q.next())
+            known.insert(q.value(0).toString(), q.value(1).toLongLong());
+    return known;
 }
 void ClipModel::filter(QString s, QString o, bool f) {
     search_ = s;
@@ -93,7 +120,7 @@ void ClipModel::reload() {
     rows_.clear();
     QSqlQuery q(db_);
     q.prepare("SELECT COUNT(*) FROM clips" + where());
-    q.bindValue(":search", "%" + search_ + "%");
+    q.bindValue(":search", pattern());
     total_ = q.exec() && q.next() ? q.value(0).toInt() : 0;
     endResetModel();
     fetchMore({});
@@ -108,7 +135,7 @@ void ClipModel::fetchMore(const QModelIndex &p) {
     QSqlQuery q(db_);
     q.prepare("SELECT * FROM clips" + where() + " ORDER BY " + order_ +
               (order_ == "name" ? " ASC" : " DESC") + " LIMIT 100 OFFSET :offset");
-    q.bindValue(":search", "%" + search_ + "%");
+    q.bindValue(":search", pattern());
     q.bindValue(":offset", rows_.size());
     if (!q.exec())
         return;
@@ -118,6 +145,8 @@ void ClipModel::fetchMore(const QModelIndex &p) {
         auto r = q.record();
         for (int i = 0; i < r.count(); ++i)
             m[r.fieldName(i)] = q.value(i);
+        // Cached once per fetch: data() runs on every repaint and must not touch the disk.
+        m["missing"] = !QFileInfo::exists(m["path"].toString());
         page << m;
     }
     if (page.isEmpty())
@@ -137,8 +166,16 @@ void ClipModel::upsert(const QVariantMap &m) {
               "duration=excluded.duration,size=excluded.size");
     for (auto key : QStringList{"path", "name", "duration", "size", "created", "game"})
         q.bindValue(":" + key, m.value(key));
-    if (!q.exec())
+    if (!q.exec()) {
         emit failure(q.lastError().text());
+        return;
+    }
+    for (int i = 0; i < rows_.size(); ++i)
+        if (rows_[i]["path"] == m.value("path")) {
+            patch(i, {{"duration", m.value("duration")}, {"size", m.value("size")}, {"missing", false}},
+                  {Duration, Size, Missing});
+            return;
+        }
     reload();
 }
 void ClipModel::setThumbnail(QString p, QString t) {
@@ -146,8 +183,11 @@ void ClipModel::setThumbnail(QString p, QString t) {
     q.prepare("UPDATE clips SET thumbnail=? WHERE path=?");
     q.addBindValue(t);
     q.addBindValue(p);
-    q.exec();
-    reload();
+    if (!q.exec())
+        return;
+    for (int i = 0; i < rows_.size(); ++i)
+        if (rows_[i]["path"] == p)
+            patch(i, {{"thumbnail", t}}, {Thumbnail});
 }
 bool ClipModel::favorite(int id, bool v) {
     QSqlQuery q(db_);
@@ -155,7 +195,10 @@ bool ClipModel::favorite(int id, bool v) {
     q.addBindValue(v);
     q.addBindValue(id);
     bool ok = q.exec();
-    reload();
+    if (ok && favorites_ && !v)
+        reload();
+    else if (ok)
+        patch(rowOf(id), {{"favorite", v}}, {Favorite});
     return ok;
 }
 bool ClipModel::tags(int id, QString t) {
@@ -164,7 +207,8 @@ bool ClipModel::tags(int id, QString t) {
     q.addBindValue(t.left(512));
     q.addBindValue(id);
     bool ok = q.exec();
-    reload();
+    if (ok)
+        patch(rowOf(id), {{"tags", t.left(512)}}, {Tags});
     return ok;
 }
 bool ClipModel::rename(int id, QString name) {
@@ -187,7 +231,10 @@ bool ClipModel::rename(int id, QString name) {
     q.addBindValue(name.trimmed());
     q.addBindValue(id);
     bool ok = q.exec();
-    reload();
+    if (ok && order_ != "name")
+        patch(rowOf(id), {{"path", path}, {"name", name.trimmed()}, {"missing", false}}, {Path, Url, Name, Missing});
+    else
+        reload();
     return ok;
 }
 bool ClipModel::remove(int id, bool trash) {
@@ -204,7 +251,15 @@ bool ClipModel::remove(int id, bool trash) {
     q.prepare("DELETE FROM clips WHERE id=?");
     q.addBindValue(id);
     bool ok = q.exec();
-    reload();
+    int row = rowOf(id);
+    if (ok && row >= 0) {
+        beginRemoveRows({}, row, row);
+        rows_.remove(row);
+        endRemoveRows();
+        --total_;
+        emit countChanged();
+    } else if (ok)
+        reload();
     return ok;
 }
 } // namespace cf

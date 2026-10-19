@@ -156,6 +156,8 @@ ColumnLayout {
             required property string clipName
             required property real duration
             required property string game
+            required property string created
+            required property bool missing
             width: ListView.view.width
             height: 60
             background: Rectangle {
@@ -174,12 +176,18 @@ ColumnLayout {
                     color: Theme.secondary
                 }
                 Text {
-                    text: Math.round(duration) + " s   →"
+                    text: missing ? "Fichier manquant" : Theme.date(created)
+                    color: missing ? Theme.danger : Theme.secondary
+                    font.pixelSize: 12
+                }
+                Text {
+                    text: Theme.duration(duration) + "   →"
                     color: Theme.secondary
                     font.family: Theme.mono
                 }
             }
-            onClicked: appController.selectClip(index)
+            onClicked: if (!missing)
+                appController.selectClip(index)
         }
     }
 }

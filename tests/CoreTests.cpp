@@ -87,11 +87,23 @@ class CoreTests : public QObject {
             QCOMPARE(model.count(), 1);
             model.filter("missing");
             QCOMPARE(model.count(), 0);
+            model.filter("%");
+            QCOMPARE(model.count(), 0);
+            model.filter("");
+            QVERIFY(model.rename(id, "Victory_final"));
+            QCOMPARE(model.get(0)["name"].toString(), QString("Victory_final"));
+            model.filter("y_f");
+            QCOMPARE(model.count(), 1);
+            model.filter("");
+            QVERIFY(model.favorite(id, false));
+            QCOMPARE(model.data(model.index(0), cf::ClipModel::Favorite).toBool(), false);
         }
         {
             cf::ClipModel model(db);
             QCOMPARE(model.count(), 1);
+            video = model.get(0)["path"].toString();
             QVERIFY(QFile::remove(video));
+            model.reload();
             QVERIFY(model.data(model.index(0), cf::ClipModel::Missing).toBool());
             QVERIFY(model.remove(model.get(0)["id"].toInt()));
             QCOMPARE(model.count(), 0);

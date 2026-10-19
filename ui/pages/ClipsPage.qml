@@ -9,6 +9,22 @@ ColumnLayout {
     spacing: 18
     property bool listMode: false
     property var contextClip: ({})
+    function applyFilter() {
+        clipLibrary.filter(search.text, sort.model[sort.currentIndex].value, onlyFav.checked);
+    }
+    // Typing triggers one SQL query after a short pause instead of one per keystroke.
+    Timer {
+        id: searchDelay
+        interval: 180
+        onTriggered: page.applyFilter()
+    }
+    Shortcut {
+        sequence: StandardKey.Find
+        onActivated: {
+            search.forceActiveFocus();
+            search.selectAll();
+        }
+    }
     RowLayout {
         Layout.fillWidth: true
         Text {
@@ -40,8 +56,9 @@ ColumnLayout {
         CField {
             id: search
             Layout.fillWidth: true
-            placeholderText: "Rechercher un nom, un jeu ou un tag"
-            onTextChanged: clipLibrary.filter(text, sort.model[sort.currentIndex].value, onlyFav.checked)
+            placeholderText: "Rechercher un nom, un jeu ou un tag  (Ctrl+F)"
+            onTextChanged: searchDelay.restart()
+            Keys.onEscapePressed: text = ""
         }
         CCombo {
             id: sort
@@ -64,12 +81,12 @@ ColumnLayout {
                     value: "name"
                 }
             ]
-            onActivated: clipLibrary.filter(search.text, model[currentIndex].value, onlyFav.checked)
+            onActivated: page.applyFilter()
         }
         CheckBox {
             id: onlyFav
             text: "Favoris"
-            onToggled: clipLibrary.filter(search.text, sort.model[sort.currentIndex].value, checked)
+            onToggled: page.applyFilter()
         }
         ActionButton {
             text: page.listMode ? "Grille" : "Liste"
@@ -78,7 +95,7 @@ ColumnLayout {
     }
     Text {
         visible: clipLibrary.count === 0
-        text: "Aucun clip trouvé. Sauvegarde un replay ou importe une vidéo."
+        text: search.text.length > 0 || onlyFav.checked ? "Aucun clip ne correspond à ces filtres." : "Aucun clip pour l'instant. Active le replay et appuie sur F" + (appController.config.saveKey - 111) + ", ou importe une vidéo."
         color: Theme.secondary
         wrapMode: Text.Wrap
         Layout.fillWidth: true
@@ -99,6 +116,8 @@ ColumnLayout {
             required property string filePath
             required property url thumbnail
             required property real duration
+            required property var fileSize
+            required property string created
             required property bool favorite
             required property bool missing
             required property string game
@@ -110,12 +129,22 @@ ColumnLayout {
                 color: hover.hovered ? Theme.raised : Theme.surface
                 radius: 10
             }
+            Rectangle {
+                x: image.x
+                y: image.y
+                width: image.width
+                height: image.height
+                radius: page.listMode ? 6 : 0
+                color: "#07080d"
+                visible: image.status !== Image.Ready
+            }
             Image {
                 id: image
-                visible: !page.listMode
-                anchors.top: parent.top
-                width: parent.width
+                x: page.listMode ? 8 : 0
+                y: page.listMode ? (parent.height - height) / 2 : 0
+                width: page.listMode ? 88 : parent.width
                 height: width * 0.5625
+                sourceSize.width: 480
                 source: thumbnail
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
@@ -139,16 +168,17 @@ ColumnLayout {
                 Text {
                     id: time
                     anchors.centerIn: parent
-                    text: Math.floor(duration / 60) + ":" + String(Math.floor(duration % 60)).padStart(2, "0")
+                    text: Theme.duration(duration)
                     color: Theme.text
                     font.family: Theme.mono
                     font.pixelSize: 12
                 }
             }
             Column {
-                anchors.left: parent.left
+                anchors.left: page.listMode ? image.right : parent.left
                 anchors.right: menuButton.left
-                anchors.bottom: parent.bottom
+                anchors.bottom: page.listMode ? undefined : parent.bottom
+                anchors.verticalCenter: page.listMode ? parent.verticalCenter : undefined
                 anchors.margins: 12
                 spacing: 5
                 Text {
@@ -160,7 +190,9 @@ ColumnLayout {
                 }
                 Text {
                     width: parent.width
-                    text: missing ? "Fichier déplacé ou supprimé" : (game || "Vidéo locale") + (page.listMode ? " · " + Math.round(duration) + " s" : "")
+                    text: missing ? "Fichier déplacé ou supprimé" : [game || "Vidéo locale", Theme.date(created), Theme.size(fileSize)].concat(page.listMode ? [Theme.duration(duration)] : []).filter(function (t) {
+                        return t.length > 0;
+                    }).join("  ·  ")
                     color: Theme.secondary
                     font.pixelSize: 12
                     elide: Text.ElideRight
@@ -176,7 +208,8 @@ ColumnLayout {
             Button {
                 id: menuButton
                 anchors.right: parent.right
-                anchors.bottom: parent.bottom
+                anchors.bottom: page.listMode ? undefined : parent.bottom
+                anchors.verticalCenter: page.listMode ? parent.verticalCenter : undefined
                 anchors.margins: 8
                 width: 34
                 height: 34

@@ -16,4 +16,35 @@ QtObject {
     readonly property string font: "Segoe UI"
     readonly property string mono: "Consolas"
     readonly property int radius: 10
+
+    // 75 -> "1:15", 3725 -> "1:02:05"; tenths optional for editor timecodes.
+    function duration(seconds, tenths) {
+        var s = Math.max(0, Number(seconds) || 0);
+        var whole = Math.floor(s);
+        var h = Math.floor(whole / 3600), m = Math.floor(whole % 3600 / 60), sec = whole % 60;
+        var text = (h > 0 ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(sec).padStart(2, "0");
+        return tenths ? text + "." + Math.floor((s - whole) * 10) : text;
+    }
+    function size(bytes) {
+        var b = Number(bytes) || 0;
+        if (b >= 1073741824)
+            return (b / 1073741824).toFixed(1) + " Go";
+        if (b >= 1048576)
+            return Math.round(b / 1048576) + " Mo";
+        return Math.max(1, Math.round(b / 1024)) + " Ko";
+    }
+    function date(iso) {
+        var d = new Date(iso);
+        if (isNaN(d.getTime()))
+            return "";
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+        var days = Math.round((today - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+        var time = Qt.formatTime(d, "HH:mm");
+        if (days === 0)
+            return "Aujourd'hui " + time;
+        if (days === 1)
+            return "Hier " + time;
+        return Qt.formatDate(d, days < 300 ? "d MMM" : "d MMM yyyy") + " " + time;
+    }
 }

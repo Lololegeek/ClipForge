@@ -93,6 +93,14 @@ void MediaJobs::next() {
                                 .toHex();
                 QString image = cache_ + "/" + hash + ".jpg";
                 p->deleteLater();
+                if (QFileInfo(image).size() > 0) {
+                    // Same path, size and modification time: the cached thumbnail is still valid.
+                    emit thumbnail(job.path, image);
+                    pending_.remove(job.path);
+                    probe_ = nullptr;
+                    next();
+                    return;
+                }
                 auto thumb = new QProcess(this);
                 probe_ = thumb;
                 connect(thumb, &QProcess::errorOccurred, this, [this, thumb, job](QProcess::ProcessError e) {

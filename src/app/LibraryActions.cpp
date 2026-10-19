@@ -21,7 +21,17 @@ namespace cf {
 void Controller::scan() {
     QDir dir(settings_.clips);
     auto entries = dir.entryInfoList({"*.mp4", "*.mkv", "*.mov", "*.webm"}, QDir::Files, QDir::Time);
-    auto work = std::make_shared<QFileInfoList>(entries);
+    // Unchanged clips that already have a thumbnail are not probed again on every launch.
+    auto known = library_.knownFiles();
+    QFileInfoList fresh;
+    for (const auto &f : entries) {
+        auto it = known.constFind(f.absoluteFilePath());
+        if (it == known.cend() || it.value() != f.size())
+            fresh << f;
+    }
+    if (fresh.isEmpty())
+        return;
+    auto work = std::make_shared<QFileInfoList>(fresh);
     auto timer = new QTimer(this);
     timer->setInterval(100);
     connect(timer, &QTimer::timeout, this, [this, timer, work] {

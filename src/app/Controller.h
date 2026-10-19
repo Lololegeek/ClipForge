@@ -34,6 +34,7 @@ class Controller : public QObject {
     Q_PROPERTY(bool exportBusy READ exportBusy NOTIFY changed)
     Q_PROPERTY(double exportProgress READ exportProgress NOTIFY changed)
     Q_PROPERTY(QString lastClip READ lastClip NOTIFY changed)
+    Q_PROPERTY(QString lastExport READ lastExport NOTIFY changed)
     Q_PROPERTY(QString version READ version CONSTANT)
     Q_PROPERTY(bool autostart READ autostart NOTIFY changed)
     Q_PROPERTY(QString updateState READ updateState NOTIFY changed)
@@ -95,6 +96,9 @@ class Controller : public QObject {
     }
     QString lastClip() const {
         return lastClip_;
+    }
+    QString lastExport() const {
+        return lastExport_;
     }
     QString version() const {
         return QCoreApplication::applicationVersion();
@@ -158,7 +162,7 @@ class Controller : public QObject {
     void openEditor();
 
   private:
-    QString data_, state_ = "Initializing", message_, method_ = "—", encoder_ = "—", game_, lastClip_;
+    QString data_, state_ = "Initializing", message_, method_ = "—", encoder_ = "—", game_, lastClip_, lastExport_;
     Settings settings_;
     ClipModel library_;
     MediaJobs jobs_;

@@ -97,6 +97,7 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
     });
     connect(&jobs_, &MediaJobs::exportBusy, this, [this](bool) { emit changed(); });
     connect(&jobs_, &MediaJobs::exported, this, [this](QString p) {
+        lastExport_ = p;
         jobs_.import(p, game_);
         notify("Export terminé : " + QFileInfo(p).fileName());
     });
