@@ -147,7 +147,7 @@ Controller::~Controller() {
 void Controller::connectTray() {
     tray_ = new QSystemTrayIcon(this);
     tray_->setIcon(QApplication::windowIcon());
-    tray_->setToolTip("ClipForge · F8 pour sauvegarder");
+    tray_->setToolTip(QString("ClipForge · F%1 pour sauvegarder").arg(settings_.saveKey - 111));
     auto menu = new QMenu;
     menu->addAction("Ouvrir ClipForge", this, &Controller::showWindow);
     menu->addAction("Sauvegarder le replay", this, &Controller::saveReplay);

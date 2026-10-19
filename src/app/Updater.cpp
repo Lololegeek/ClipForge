@@ -13,6 +13,7 @@
 #include <QProcess>
 #include <QUrl>
 #include <QVersionNumber>
+#include <memory>
 namespace cf {
 namespace {
 const char *kLatest = "https://api.github.com/repos/Lololegeek/ClipForge/releases/latest";
@@ -27,7 +28,10 @@ QNetworkRequest request(const QUrl &url) {
 }
 } // namespace
 Updater::Updater(QString data, QObject *parent)
-    : QObject(parent), net_(new QNetworkAccessManager(this)), data_(std::move(data)) {}
+    : QObject(parent), net_(new QNetworkAccessManager(this)), data_(std::move(data)) {
+    // An installer left over from a previous update is stale by definition.
+    QDir(data_ + "/update").removeRecursively();
+}
 int Updater::compare(const QString &a, const QString &b) {
     auto parse = [](QString v) {
         if (v.startsWith('v', Qt::CaseInsensitive))
@@ -104,26 +108,38 @@ void Updater::startDownload() {
     file_ = data_ + "/update/" + kAsset;
     progress_ = 0;
     setState("downloading");
+    auto out = std::make_shared<QFile>(file_ + ".part");
+    if (!out->open(QIODevice::WriteOnly | QIODevice::Truncate))
+        return fail("Impossible d'enregistrer la mise à jour.");
+    auto hash = std::make_shared<QCryptographicHash>(QCryptographicHash::Sha256);
     auto reply = net_->get(request(QUrl(url_)));
-    reply->setReadBufferSize(0);
+    connect(reply, &QNetworkReply::readyRead, this, [reply, out, hash] {
+        auto chunk = reply->readAll();
+        hash->addData(chunk);
+        out->write(chunk);
+    });
     connect(reply, &QNetworkReply::downloadProgress, this, [this](qint64 got, qint64 total) {
         progress_ = total > 0 ? double(got) / double(total) : 0;
         emit changed();
     });
-    connect(reply, &QNetworkReply::finished, this, [this, reply] {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, out, hash] {
         reply->deleteLater();
-        if (reply->error() != QNetworkReply::NoError)
+        out->close();
+        if (reply->error() != QNetworkReply::NoError) {
+            out->remove();
             return fail("Téléchargement de la mise à jour impossible : " + reply->errorString());
-        auto bytes = reply->readAll();
-        if (bytes.size() < 1024 * 1024)
+        }
+        if (out->size() < 1024 * 1024) {
+            out->remove();
             return fail("Installateur téléchargé invalide.");
-        if (digest_.startsWith("sha256:") &&
-            QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex() != digest_.mid(7).toLatin1())
+        }
+        if (digest_.startsWith("sha256:") && hash->result().toHex() != digest_.mid(7).toLatin1()) {
+            out->remove();
             return fail("Somme de contrôle de la mise à jour incorrecte.");
-        QFile f(file_);
-        if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate) || f.write(bytes) != bytes.size())
+        }
+        QFile::remove(file_);
+        if (!out->rename(file_))
             return fail("Impossible d'enregistrer la mise à jour.");
-        f.close();
         setState("ready");
         emit message("Mise à jour " + version_ + " prête : elle s'installera à la fermeture ou via Paramètres.", false);
     });

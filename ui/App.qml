@@ -199,7 +199,7 @@ ApplicationWindow {
                     anchors.margins: 9
                     anchors.leftMargin: 30
                     anchors.rightMargin: 30
-                    text: appController.message || "F8 : replay   ·   F9 : enregistrement   ·   F10 : capture d’écran"
+                    text: appController.message || ("F" + (appController.config.saveKey - 111) + " : replay   ·   F" + (appController.config.recordKey - 111) + " : enregistrement   ·   F" + (appController.config.screenshotKey - 111) + " : capture d’écran")
                     color: Theme.secondary
                     font.pixelSize: 12
                     wrapMode: Text.Wrap
