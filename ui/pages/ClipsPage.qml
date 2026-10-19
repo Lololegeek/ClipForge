@@ -195,16 +195,19 @@ ColumnLayout {
                     border.color: menuButton.activeFocus ? Theme.accent : "transparent"
                     border.width: 2
                 }
-                contentItem: Row {
-                    spacing: 3
-                    anchors.centerIn: parent
-                    Repeater {
-                        model: 3
-                        Rectangle {
-                            width: 4
-                            height: 4
-                            radius: 2
-                            color: Theme.text
+                padding: 0
+                contentItem: Item {
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 3
+                        Repeater {
+                            model: 3
+                            Rectangle {
+                                width: 4
+                                height: 4
+                                radius: 2
+                                color: Theme.text
+                            }
                         }
                     }
                 }
