@@ -12,6 +12,7 @@
 #include <QMenu>
 #include <QPainter>
 #include <QProcess>
+#include <QSettings>
 #include <QScreen>
 #include <QStorageInfo>
 #include <QSystemTrayIcon>
@@ -88,6 +89,18 @@ void Controller::quit() {
     emit changed();
     updater_.launchInstaller();
     QApplication::quit();
+}
+static const char *kRunKey = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+bool Controller::autostart() const {
+    return QSettings(kRunKey, QSettings::NativeFormat).contains("ClipForge");
+}
+void Controller::setAutostart(bool enabled) {
+    QSettings run(kRunKey, QSettings::NativeFormat);
+    if (enabled)
+        run.setValue("ClipForge", "\"" + QDir::toNativeSeparators(QCoreApplication::applicationFilePath()) + "\" --headless");
+    else
+        run.remove("ClipForge");
+    emit changed();
 }
 void Controller::checkForUpdates() {
     updater_.check(true, false);

@@ -39,7 +39,8 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 [Icons]
 Name: "{group}\ClipForge"; Filename: "{app}\ClipForge.exe"; IconFilename: "{app}\ClipForge.ico"; AppUserModelID: "ClipForge.Desktop"
 Name: "{autodesktop}\ClipForge"; Filename: "{app}\ClipForge.exe"; IconFilename: "{app}\ClipForge.ico"; AppUserModelID: "ClipForge.Desktop"; Tasks: desktopicon
-Name: "{userstartup}\ClipForge"; Filename: "{app}\ClipForge.exe"; IconFilename: "{app}\ClipForge.ico"; Parameters: "--headless"; Tasks: startup
+[Registry]
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "ClipForge"; ValueData: """{app}\ClipForge.exe"" --headless"; Tasks: startup; Flags: uninsdeletevalue
 [Run]
 Filename: "{app}\ClipForge.exe"; Parameters: "--headless"; Flags: nowait; Check: Relaunch
 Filename: "{app}\ClipForge.exe"; Description: "Lancer ClipForge"; Flags: nowait postinstall skipifsilent unchecked

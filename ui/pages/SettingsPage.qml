@@ -454,6 +454,11 @@ ColumnLayout {
                 checked: settings.draft.startMinimized
             }
             CheckBox {
+                text: "Lancer ClipForge au démarrage de Windows (dans la zone de notification)"
+                checked: appController.autostart
+                onToggled: appController.setAutostart(checked)
+            }
+            CheckBox {
                 id: autoUpdate
                 text: "Télécharger automatiquement les mises à jour"
                 checked: settings.draft.autoUpdate

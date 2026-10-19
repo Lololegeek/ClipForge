@@ -32,6 +32,7 @@ class Controller : public QObject {
     Q_PROPERTY(bool exportBusy READ exportBusy NOTIFY changed)
     Q_PROPERTY(double exportProgress READ exportProgress NOTIFY changed)
     Q_PROPERTY(QString lastClip READ lastClip NOTIFY changed)
+    Q_PROPERTY(bool autostart READ autostart NOTIFY changed)
     Q_PROPERTY(QString updateState READ updateState NOTIFY changed)
     Q_PROPERTY(QString updateVersion READ updateVersion NOTIFY changed)
     Q_PROPERTY(double updateProgress READ updateProgress NOTIFY changed)
@@ -95,6 +96,7 @@ class Controller : public QObject {
     QString lastClip() const {
         return lastClip_;
     }
+    bool autostart() const;
     QString updateState() const {
         return updater_.state();
     }
@@ -138,6 +140,7 @@ class Controller : public QObject {
     Q_INVOKABLE void configurationFile(bool importing);
     Q_INVOKABLE void chooseClipsFolder();
     Q_INVOKABLE void quit();
+    Q_INVOKABLE void setAutostart(bool enabled);
     Q_INVOKABLE void checkForUpdates();
     Q_INVOKABLE void installUpdate();
     void runSelfTest();

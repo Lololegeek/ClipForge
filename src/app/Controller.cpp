@@ -104,6 +104,8 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
         auto error = hotkeys_.configure(settings_.saveKey, settings_.recordKey, settings_.screenshotKey);
         if (!error.isEmpty())
             notify(error, true);
+        if (autostart())
+            setAutostart(true);
         connect(&updater_, &Updater::changed, this, &Controller::changed);
         connect(&updater_, &Updater::message, this, &Controller::notify);
         updateTimer_.setInterval(6 * 3600 * 1000);
