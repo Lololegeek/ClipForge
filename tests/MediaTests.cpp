@@ -94,7 +94,7 @@ class MediaTests : public QObject {
     }
     void globalHotkey() {
         cf::GlobalHotkeys hotkeys;
-        QVERIFY(hotkeys.configure(VK_F22, VK_F23, VK_F24).isEmpty());
+        QVERIFY(hotkeys.configure(VK_F22).isEmpty());
         QSignalSpy saved(&hotkeys, &cf::GlobalHotkeys::save);
         INPUT keys[2]{};
         keys[0].type = INPUT_KEYBOARD;
@@ -104,7 +104,7 @@ class MediaTests : public QObject {
         QCOMPARE(SendInput(2, keys, sizeof(INPUT)), UINT(2));
         QTRY_COMPARE_WITH_TIMEOUT(saved.count(), 1, 3000);
         QVERIFY(RegisterHotKey(nullptr, 0xCF77, 0, VK_F21));
-        QVERIFY(!hotkeys.configure(VK_F21, VK_F23, VK_F24).isEmpty());
+        QVERIFY(!hotkeys.configure(VK_F21).isEmpty());
         UnregisterHotKey(nullptr, 0xCF77);
     }
     void preciseExport() {

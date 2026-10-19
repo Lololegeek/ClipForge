@@ -10,8 +10,7 @@ import { Pause, Play } from "lucide-react";
 import { KeyCap } from "@/components/keycap";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { saveReplayWithToast, screenshotWithToast, toggleRecordingWithToast } from "@/lib/actions";
-import { clock } from "@/lib/format";
+import { saveReplayWithToast } from "@/lib/actions";
 import { DEMO_SPEED, useDemo } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +22,7 @@ function tickStep(seconds: number) {
 }
 
 export function ReplayRuler() {
-  const { replaySeconds, buffer, active, recording, recSeconds, flash, lastSave, clips } =
+  const { replaySeconds, buffer, active, flash, lastSave, clips } =
     useDemo();
   const setReplaySeconds = useDemo((s) => s.setReplaySeconds);
   const toggleActive = useDemo((s) => s.toggleActive);
@@ -37,22 +36,6 @@ export function ReplayRuler() {
     (e) => {
       e.preventDefault();
       saveReplayWithToast();
-    },
-    { enableOnFormTags: true },
-  );
-  useHotkeys(
-    "f9",
-    (e) => {
-      e.preventDefault();
-      toggleRecordingWithToast();
-    },
-    { enableOnFormTags: true },
-  );
-  useHotkeys(
-    "f10",
-    (e) => {
-      e.preventDefault();
-      screenshotWithToast();
     },
     { enableOnFormTags: true },
   );
@@ -128,11 +111,6 @@ export function ReplayRuler() {
           />
           {active ? "Tampon actif" : "Capture en veille"}
         </span>
-        {recording && (
-          <span className="inline-flex items-center gap-2 rounded-full bg-[#ffadb5]/15 px-3 py-1 font-mono text-[0.8125rem] text-[#c4414f] dark:text-[#ffadb5]">
-            <span className="size-2 rounded-full bg-[#e5576a]" /> REC {clock(recSeconds)}
-          </span>
-        )}
         <div className="text-accent tnum ml-auto font-mono text-base">
           <NumberFlow value={Math.floor(buffer)} /> / {replaySeconds} s
         </div>
@@ -215,19 +193,6 @@ export function ReplayRuler() {
             onPress={saveReplayWithToast}
             disabled={!active}
           />
-          <KeyCap
-            keyName="F9"
-            label={recording ? "Arrêter" : "Enregistrer"}
-            hint="Enregistrement continu en MKV, lisible même après un plantage."
-            onPress={toggleRecordingWithToast}
-            active={recording}
-          />
-          <KeyCap
-            keyName="F10"
-            label="Capture"
-            hint="Image de l’écran principal, pas de l’image du jeu."
-            onPress={screenshotWithToast}
-          />
         </div>
       </div>
 
@@ -254,8 +219,8 @@ export function ReplayRuler() {
         )}
       </ul>
       <p className="text-muted mt-4 text-[0.8125rem]">
-        Démo dans le navigateur, accélérée ×{DEMO_SPEED} : rien n’est enregistré. Les touches F8, F9
-        et F10 du clavier fonctionnent ici aussi.
+        Démo dans le navigateur, accélérée ×{DEMO_SPEED} : rien n’est enregistré. La touche F8
+        du clavier fonctionne ici aussi.
       </p>
     </div>
   );

@@ -6,7 +6,7 @@ import Image from "next/image";
 const SCREENS = [
   { id: "home", label: "Accueil", description: "Accueil de ClipForge et derniers clips importés." },
   { id: "clips", label: "Mes clips", description: "Bibliothèque de vidéos importées dans ClipForge." },
-  { id: "record", label: "Enregistrer", description: "Réglages d’enregistrement et de replay de l’application Windows." },
+  { id: "record", label: "Capture", description: "Contrôles du replay de l’application Windows." },
   { id: "editor", label: "Éditeur", description: "Éditeur ClipForge lisant un extrait de Big Buck Bunny." },
   { id: "settings", label: "Paramètres", description: "Paramètres de capture, audio et raccourcis de ClipForge." },
 ] as const;

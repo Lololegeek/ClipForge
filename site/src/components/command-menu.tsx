@@ -85,7 +85,7 @@ export function CommandMenu() {
             className="[&_[cmdk-group-heading]]:text-muted [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:tracking-widest [&_[cmdk-group-heading]]:uppercase"
           >
             <Command.Item
-              value="page fonctionnalités périmètre version 0.1"
+              value="page fonctionnalités périmètre version 0.3"
               className={itemClass}
               onSelect={run(() => router.push("/fonctionnalites/"))}
             >

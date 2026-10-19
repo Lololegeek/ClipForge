@@ -64,3 +64,15 @@ The six-page QML smoke test passed with edited settings surviving refresh. The n
 The capture harness now waits for the hotkey cooldown before its second accepted save; its validator requires exactly two replays. The PowerShell media-report argument was corrected to pass one output filename/format argument to QtTest. No changes were made to the installed user's application, settings or clips for these checks. Runtime update installation, startup-registry toggling, real games, exclusive fullscreen, a clean VM and Windows 10 were not exercised for this release.
 
 Release artifacts built: installer 185114161 bytes, portable ZIP 252874214 bytes. Installer version resources are 0.2.0. The portable ZIP passed 7-Zip integrity checking and excludes development executables and the obsolete ClipForge-Fixed.exe. The regenerated installer was not installed over the user's active app during publication.
+
+## Release 0.3.0 checks, 19 October 2026
+
+MSVC release build and native version resources are 0.3.0. Core QtTest passed 7/7. Media QtTest passed 7/7 on the complete rerun; the initial suite missed the synthetic WM_HOTKEY delivery once while the desktop was busy, then the isolated hotkey test passed and the full suite passed unchanged. Capture produced two validated MP4 replays; a rapid repeated save was suppressed, and the next save succeeded after the cooldown. Full decode, timestamps, dimensions, FPS and AAC passed. Native editor playback delivered valid video frames and progressed to 5 seconds. The six-page QML smoke test passed, including settings persistence.
+
+Five refreshed 1320 x 840 website PNGs are captures from the running native 0.3.0 app with isolated test data; the games page remains private. The installed application, user settings and personal clips were not changed. Real-game and anti-cheat compatibility, overlay visibility over exclusive-fullscreen content, update download/install behavior, a clean VM and Windows 10 remain untested for this release.
+
+## Release 0.3.0 checks, 19 October 2026
+
+MSVC release build and native version resources are 0.3.0. Core QtTest passed 7/7. Media QtTest passed 7/7 on the complete rerun. The initial full run missed the synthetic WM_HOTKEY event once; the isolated hotkey test and the complete suite subsequently passed. Capture produced two MP4 replays while suppressing a rapid repeat and accepting the next save after the cooldown. Full decode, dimensions, FPS, AAC and timestamps passed. Native editor playback advanced with a valid QVideoSink frame. The six-page QML smoke test passed.
+
+Five 1320 x 840 website screenshots are captures from the running native 0.3.0 app with isolated test data. The games page is not published. Website TypeScript, ESLint and static production build passed. The installer and portable archive both carry the updated 0.3 documentation. A fresh machine, Windows 10, real games, exclusive-fullscreen overlay and the live update-install flow remain untested for this release.

@@ -1,14 +1,14 @@
-# Scope of 0.2
+# Scope of 0.3
 
 | Area | Operational implementation | Limits / remaining work |
 |---|---|---|
 | Replay | libobs compressed RAM buffer, configurable duration/memory, unique filenames, one save at a time with a 1.5-second cooldown | Repeated requests during a save or cooldown are ignored; no disk-backed replay |
-| Capture | DXGI display, WGC window, standard OBS game source, manual MKV recording, MP4 replay | Actual game/anti-cheat checks, device-loss recovery, seamless source-type fallback remain |
+| Capture | DXGI display, WGC window, standard OBS game source, MP4 replay | UI focuses on clips; manual recording and screenshot controls were removed. Actual game/anti-cheat checks, device-loss recovery and source fallback remain |
 | Encoding | AMF/NVENC/QSV discovery and selection, H.264 x264 fallback, hardware HEVC/AV1 selection | Only AMF H.264 and x264 were exercised on this machine; other codecs/GPUs untested |
 | Audio capture | WASAPI system/process source, selected microphone, per-source gain/mute through zero volume | One mixed AAC track; no separate tracks/meters/live device changes. Process isolation and microphone enabled require additional runtime tests |
 | Library | SQLite paging, thumbnails, search/sort, favorites/tags/rename/trash, import, missing-file handling | External changes need Refresh; no relocation assistant. Remote/very large SQL workloads are not asynchronous yet |
 | Editor | Native video, decoded audio output, scrub/range trim, multiple passages from one source, removal, speed, gain, undo/redo, saved projects, H.264/HEVC MP4 exports | All exports reencode; no lossless keyframe copy, multi-file assembly, vertical crop, text, subtitles or transitions |
-| Background | Tray menu, configurable F1–F24 keys with conflict errors, replay/recording/screenshot cooldowns, optional click-through notification overlay, close-to-tray | Exclusive-fullscreen overlay visibility and actual games remain unverified; F10 captures primary desktop, not the game framebuffer |
+| Background | Tray menu, one configurable clip hotkey from F1–F24 with conflict errors, replay cooldown, optional click-through notification overlay, close-to-tray | Exclusive-fullscreen overlay visibility and actual games remain unverified; F9/F10 are no longer registered by ClipForge |
 | Games | Enumerate windows/executables, opt-in profiles, auto-start for known foreground profiles, stop after their windows disappear | Profile/game behavior has no real-game runtime verification yet. Unknown processes never automatically become games |
 | Settings | Validated atomic JSON, config import/export, start minimized, shared Windows startup toggle, optional GitHub update checks/downloads with installation at quit, single-instance window activation | Update checks require internet; portable builds open the release page. No auto clip deletion, disk quota, temporary-buffer folder or auto-clipping plugins |
 

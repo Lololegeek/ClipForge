@@ -15,8 +15,8 @@ const FAQ = [
     a: "Ce n’est pas vérifié sur de vrais jeux. ClipForge utilise des méthodes de capture standard (DXGI, Windows Graphics Capture, capture de jeu OBS) et ne tente jamais de contourner un anti-triche. La présence d’une fenêtre ne garantit pas sa compatibilité.",
   },
   {
-    q: "Pourquoi l’enregistrement est en MKV et les replays en MP4 ?",
-    a: "Le MKV résiste mieux à une interruption : si le jeu ou le PC plante, ce qui a été écrit reste lisible. Un replay est court et finalisé tout de suite, donc le MP4 suffit. L’éditeur exporte en MP4.",
+    q: "Dans quel format sont sauvegardés mes clips ?",
+    a: "Les clips de replay sont sauvegardés en MP4. L’éditeur exporte aussi en MP4 et conserve la vidéo originale.",
   },
   {
     q: "Le replay est-il écrit en continu sur mon SSD ?",
