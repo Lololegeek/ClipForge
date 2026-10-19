@@ -46,3 +46,9 @@ MSVC release build succeeded. Core QtTest: 7 passed; media QtTest: 7 passed. A 3
 The regenerated Inno Setup installer installed silently to an isolated path containing an accented character, without administrator rights. The installed app initialized its bundled dependencies and passed the editor test (advancing playback and a valid QVideoSink frame). Silent uninstall returned 0, required no reboot and removed the test installation directory. Test data used an isolated directory. Installer version: 0.1.0.
 
 The website passed TypeScript, ESLint and the production static build. Browser checks verified the screenshot tabs, a loaded real editor image, the GitHub installer link and no horizontal overflow at desktop and 390-pixel mobile widths. Screenshot provenance and media attribution are in SCREENSHOTS.md. Windows 10, a clean VM and real-game compatibility remain untested.
+
+## Windows icon fix, 0.1.1
+
+Fixed the Qt resource filename used by QIcon (`:/assets/ClipForge.ico`) and explicitly assigned it to the QQuickWindow. The process and installed shortcuts share the ClipForge.Desktop AppUserModelID. Start menu, desktop and startup shortcuts use the installed ClipForge.ico file. CMake now tracks the ICO file as a dependency of the Windows resource so branding changes rebuild the executable's icon.
+
+Verified the installed executable contains seven native icon sizes. Both ExtractAssociatedIcon (Windows shell) and WM_GETICON on the actual running installed QQuickWindow return the website logo. Captured evidence remains local in artifacts/live-window-icon.png and artifacts/fixed-shell-icon.png. The installed Start menu shortcut was updated and Windows received a shell-change notification.

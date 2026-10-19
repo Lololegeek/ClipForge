@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(ClipForge VERSION 0.1.0 LANGUAGES CXX)
+project(ClipForge VERSION 0.1.1 LANGUAGES CXX)
 if(CMAKE_CXX_CL_SHOWINCLUDES_PREFIX MATCHES "inclusion du fichier")
   # Some French-only MSVC kits emit UTF-8 but CMake probes the prefix as OEM text.
   set(CMAKE_CL_SHOWINCLUDES_PREFIX "Remarque : inclusion du fichier :  ")
@@ -33,6 +33,8 @@ target_link_libraries(clipforge_core PUBLIC Qt6::Core Qt6::Gui Qt6::Sql Qt6::Mul
 qt_add_executable(ClipForge WIN32 src/app/main.cpp src/app/Controller.cpp src/app/Controller.h
  src/app/CaptureActions.cpp src/app/LibraryActions.cpp src/app/EditActions.cpp src/app/GameProfiles.cpp)
 configure_file(packaging/windows.rc.in "${CMAKE_BINARY_DIR}/windows.rc" @ONLY)
+set_source_files_properties("${CMAKE_BINARY_DIR}/windows.rc" PROPERTIES
+  OBJECT_DEPENDS "${CMAKE_SOURCE_DIR}/assets/ClipForge.ico")
 target_sources(ClipForge PRIVATE "${CMAKE_BINARY_DIR}/windows.rc")
 target_link_libraries(ClipForge PRIVATE clipforge_core Qt6::Widgets Qt6::Quick Qt6::QuickControls2 Qt6::Multimedia)
 qt_add_resources(ClipForge ui PREFIX "/" FILES

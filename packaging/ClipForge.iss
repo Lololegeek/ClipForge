@@ -2,7 +2,7 @@
  #define SourceDir "..\dist\ClipForge"
 #endif
 #ifndef AppVersion
- #define AppVersion "0.1.0"
+ #define AppVersion "0.1.1"
 #endif
 [Setup]
 AppId={{C38E01B3-9388-4B47-ACE2-04EB912F4160}
@@ -37,8 +37,8 @@ Name: "startup"; Description: "Démarrer ClipForge dans la zone de notification 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "core_tests.exe,media_tests.exe,ClipForgeFixture.exe,*.pdb"
 [Icons]
-Name: "{group}\ClipForge"; Filename: "{app}\ClipForge.exe"
-Name: "{autodesktop}\ClipForge"; Filename: "{app}\ClipForge.exe"; Tasks: desktopicon
-Name: "{userstartup}\ClipForge"; Filename: "{app}\ClipForge.exe"; Parameters: "--headless"; Tasks: startup
+Name: "{group}\ClipForge"; Filename: "{app}\ClipForge.exe"; IconFilename: "{app}\ClipForge.ico"; AppUserModelID: "ClipForge.Desktop"
+Name: "{autodesktop}\ClipForge"; Filename: "{app}\ClipForge.exe"; IconFilename: "{app}\ClipForge.ico"; AppUserModelID: "ClipForge.Desktop"; Tasks: desktopicon
+Name: "{userstartup}\ClipForge"; Filename: "{app}\ClipForge.exe"; IconFilename: "{app}\ClipForge.ico"; Parameters: "--headless"; Tasks: startup
 [Run]
 Filename: "{app}\ClipForge.exe"; Description: "Lancer ClipForge"; Flags: nowait postinstall skipifsilent unchecked

@@ -5,6 +5,7 @@ Set-Location $root
 $out=Join-Path $root 'dist/ClipForge'
 New-Item -ItemType Directory -Force $out,"$out/obs/bin/64bit","$out/obs/obs-plugins/64bit","$out/obs/data","$out/tools","$out/licenses" | Out-Null
 Copy-Item build/ClipForge.exe $out -Force
+Copy-Item assets/ClipForge.ico $out -Force
 # Only load the multimedia modules used by ClipForge; never load the OBS frontend.
 Get-ChildItem .deps/obs/bin/64bit -File | Where-Object { $_.Extension -eq '.dll' -or $_.Name -in @('obs-ffmpeg-mux.exe','obs-amf-test.exe','obs-nvenc-test.exe','obs-qsv-test.exe') } | Copy-Item -Destination "$out/obs/bin/64bit" -Force
 Copy-Item .deps/obs/bin/64bit/obs.dll $out -Force

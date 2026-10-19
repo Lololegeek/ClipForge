@@ -20,6 +20,7 @@
 #include <QVideoFrame>
 #include <cstdarg>
 #include <objbase.h>
+#include <shobjidl_core.h>
 #include <windows.h>
 namespace {
 QFile logfile;
@@ -42,12 +43,14 @@ void obsLog(int level, const char *format, va_list args, void *) {
 int main(int argc, char **argv) {
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    SetCurrentProcessExplicitAppUserModelID(L"ClipForge.Desktop");
     QApplication app(argc, argv);
     app.setFont(QFont("Segoe UI", 10));
     app.setApplicationName("ClipForge");
     app.setOrganizationName("ClipForge");
-    app.setApplicationVersion("0.1.0");
-    app.setWindowIcon(QIcon("qrc:/assets/ClipForge.ico"));
+    app.setApplicationVersion("0.1.1");
+    app.setDesktopFileName("ClipForge");
+    app.setWindowIcon(QIcon(":/assets/ClipForge.ico"));
     app.setQuitOnLastWindowClosed(false);
     QQuickStyle::setStyle("Basic");
     qmlRegisterType<cf::PlaybackAudio>("ClipForge.Playback", 1, 0, "PlaybackAudio");
@@ -95,6 +98,7 @@ int main(int argc, char **argv) {
         if (engine.rootObjects().isEmpty())
             return 3;
         auto window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+        window->setIcon(app.windowIcon());
         QObject::connect(&controller, &cf::Controller::showWindow, window, [window] {
             window->showNormal();
             window->raise();
