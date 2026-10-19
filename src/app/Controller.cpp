@@ -65,9 +65,6 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
         emit changed();
     });
     connect(engine_, &ObsEngine::recording, this, [this](bool r) {
-        if (r != recording_)
-            toast(r ? "Enregistrement démarré" : "Enregistrement terminé", r ? "F" + QString::number(settings_.recordKey - 111) + " pour arrêter" : QString(),
-                  r ? Overlay::Info : Overlay::Success);
         recording_ = r;
         emit changed();
     });
@@ -108,9 +105,7 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
         connectTray();
         overlay_ = new Overlay;
         connect(&hotkeys_, &GlobalHotkeys::save, this, &Controller::saveReplay);
-        connect(&hotkeys_, &GlobalHotkeys::record, this, &Controller::toggleRecording);
-        connect(&hotkeys_, &GlobalHotkeys::screenshot, this, &Controller::screenshot);
-        auto error = hotkeys_.configure(settings_.saveKey, settings_.recordKey, settings_.screenshotKey);
+        auto error = hotkeys_.configure(settings_.saveKey);
         if (!error.isEmpty())
             notify(error, true);
         if (autostart())

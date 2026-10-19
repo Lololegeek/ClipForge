@@ -17,7 +17,7 @@ class CoreTests : public QObject {
         s.fps = 59;
         QVERIFY(!s.validate().isEmpty());
         s.fps = 60;
-        s.recordKey = s.saveKey;
+        s.saveKey = 0x10;
         QVERIFY(!s.validate().isEmpty());
     }
     void atomicSettings() {

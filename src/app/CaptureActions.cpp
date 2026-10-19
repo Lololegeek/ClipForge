@@ -50,23 +50,6 @@ void Controller::toggleRecording() {
         start();
     QMetaObject::invokeMethod(engine_, &ObsEngine::toggleRecording);
 }
-void Controller::screenshot() {
-    if (!gate(shotGate_, 800))
-        return;
-    auto screen = QGuiApplication::primaryScreen();
-    if (!screen)
-        return;
-    QDir().mkpath(settings_.clips);
-    auto path = settings_.clips + "/Capture " +
-                QDateTime::currentDateTime().toString("yyyy-MM-dd HH-mm-ss-zzz") + ".png";
-    if (screen->grabWindow(0).save(path)) {
-        notify("Capture de l'écran principal sauvegardée : " + path);
-        toast("Capture d'écran enregistrée", QFileInfo(path).fileName(), Overlay::Success);
-    } else {
-        notify("Capture d'écran impossible.", true);
-        toast("Capture d'écran impossible", {}, Overlay::Error);
-    }
-}
 bool Controller::apply(QVariantMap v) {
     if (state_ != "Idle" && state_ != "Error") {
         notify("Arrêtez la capture avant d'appliquer les réglages.", true);
@@ -80,7 +63,7 @@ bool Controller::apply(QVariantMap v) {
     }
     settings_ = s;
     emit configChanged();
-    e = hotkeys_.configure(s.saveKey, s.recordKey, s.screenshotKey);
+    e = hotkeys_.configure(s.saveKey);
     if (!e.isEmpty())
         notify(e, true);
     else

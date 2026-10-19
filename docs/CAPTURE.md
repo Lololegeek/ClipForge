@@ -10,4 +10,4 @@ Audio offers system WASAPI, application-only WASAPI (when supported) and an opti
 
 H.264 tries AMF, NVENC, QSV then x264. HEVC and AV1 require a compatible available hardware encoder; failure is shown and H.264 can be selected explicitly. 120/144 FPS, 4K and other GPUs require actual hardware validation.
 
-Saved continuous recordings use MKV to improve recovery after unexpected interruption. Replays use MP4. F10 captures the primary desktop screen via Qt; it is not a game framebuffer screenshot. Temporary on-disk replay buffering, overlay, startup registration, automatic clip deletion and universal kill detection are unavailable in this version.
+Replays use MP4. Temporary on-disk replay buffering, overlay, startup registration, automatic clip deletion and universal kill detection are unavailable in this version.

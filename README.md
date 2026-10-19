@@ -4,11 +4,11 @@ Native, offline Windows replay capture. C++20, Qt Quick, libobs, FFmpeg and SQLi
 
 Download the [Windows x64 installer](https://github.com/Lololegeek/ClipForge/releases/latest/download/ClipForge-Setup-x64.exe) or the [portable ZIP](https://github.com/Lololegeek/ClipForge/releases/latest/download/ClipForge-Windows-x64.zip). The installer runs for the current user without administrator rights. See the [website](https://lololegeek.github.io/ClipForge/) for real application screenshots and release details.
 
-Run `dist/ClipForge/ClipForge.exe`. Open **Paramètres**, select the screen/window, apply settings, then activate Instant Replay. **F8** saves a replay, **F9** toggles continuous recording, **F10** takes a screenshot of the primary screen. Closing the window keeps capture running in the tray by default; use the tray's Quit action to exit.
+Run `dist/ClipForge/ClipForge.exe`. Open **Paramètres**, select the screen/window, apply settings, then activate Instant Replay. **F8** saves a clip of the last seconds. Closing the window keeps capture running in the tray by default; use the tray's Quit action to exit.
 
 ClipForge vérifie les nouvelles versions sur GitHub (désactivable dans **Paramètres**) et, pour une installation via l'installateur, télécharge puis installe la mise à jour à la fermeture.
 
-Une notification en jeu de 3 secondes confirme chaque clip, enregistrement et capture (fenêtre ou plein écran sans bordure ; désactivable dans **Paramètres**). Les raccourcis sont protégés contre le spam : un clip à la fois, 1,5 s minimum entre deux demandes.
+Une notification en jeu de 3 secondes confirme chaque clip sauvegardé (fenêtre ou plein écran sans bordure ; désactivable dans **Paramètres**). Les raccourcis sont protégés contre le spam : un clip à la fois, 1,5 s minimum entre deux demandes.
 
 Use **Mes clips** to play a video and open the editor. Choose start/end points and click **Garder ce passage** to trim; **Ajouter** appends another passage. Export a new MP4. Originals are preserved. Saved recordings are MKV for crash resilience; the editor exports MP4. Replay files are MP4.
 

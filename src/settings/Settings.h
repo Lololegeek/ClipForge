@@ -6,7 +6,7 @@ struct Settings {
     QString clips, temporary, mode = "display", target, codec = "h264", encoder = "auto", audio = "system",
                               microphone = "disabled";
     int width = 1920, height = 1080, fps = 60, replaySeconds = 60, bitrate = 16000, memoryMB = 512;
-    int saveKey = 0x77, recordKey = 0x78, screenshotKey = 0x79;
+    int saveKey = 0x77;
     double systemVolume = 1.0, micVolume = 1.0;
     bool closeToTray = true, autoCapture = false, startMinimized = false, gameOverlay = true, autoUpdate = true;
     QJsonObject profiles;

@@ -40,11 +40,11 @@ ColumnLayout {
             }
         encoder.currentIndex = 0
     }
-    function keyRows(current, otherA, otherB) {
+    function keyRows(current) {
         var rows = []
         for (var i = 0; i < 24; ++i) {
             var key = 112 + i
-            rows.push({ name: "F" + (i + 1), value: key, available: key === current || (key !== otherA && key !== otherB) })
+            rows.push({ name: "F" + (i + 1), value: key, available: true })
         }
         return rows
     }
@@ -69,8 +69,6 @@ ColumnLayout {
         draft.autoUpdate = autoUpdate.checked;
         draft.gameOverlay = gameOverlay.checked;
         draft.saveKey = saveKey.model[saveKey.currentIndex].value;
-        draft.recordKey = recordKey.model[recordKey.currentIndex].value;
-        draft.screenshotKey = shotKey.model[shotKey.currentIndex].value;
         appController.apply(draft);
     }
     RowLayout {
@@ -403,28 +401,8 @@ ColumnLayout {
                 CCombo {
                     id: saveKey
                     textRole: "name"
-                    model: settings.keyRows(settings.draft.saveKey, settings.draft.recordKey, settings.draft.screenshotKey)
+                    model: settings.keyRows(settings.draft.saveKey)
                     currentIndex: settings.draft.saveKey - 112
-                    Layout.fillWidth: true
-                }
-                Label {
-                    text: "Enregistrer / arrêter"
-                }
-                CCombo {
-                    id: recordKey
-                    textRole: "name"
-                    model: settings.keyRows(settings.draft.recordKey, settings.draft.saveKey, settings.draft.screenshotKey)
-                    currentIndex: settings.draft.recordKey - 112
-                    Layout.fillWidth: true
-                }
-                Label {
-                    text: "Capture d'écran principal"
-                }
-                CCombo {
-                    id: shotKey
-                    textRole: "name"
-                    model: settings.keyRows(settings.draft.screenshotKey, settings.draft.saveKey, settings.draft.recordKey)
-                    currentIndex: settings.draft.screenshotKey - 112
                     Layout.fillWidth: true
                 }
             }

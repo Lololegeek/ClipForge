@@ -25,7 +25,7 @@ ApplicationWindow {
     palette.highlightedText: Theme.canvas
     palette.placeholderText: Theme.secondary
     property int page: 0
-    property var pageNames: ["Accueil", "Mes clips", "Enregistrer", "Éditeur", "Jeux", "Paramètres"]
+    property var pageNames: ["Accueil", "Mes clips", "Capture", "Éditeur", "Jeux", "Paramètres"]
     function fileUrl(p) {
         return p ? "file:///" + p.replace(/\\/g, "/") : "";
     }
@@ -199,7 +199,7 @@ ApplicationWindow {
                     anchors.margins: 9
                     anchors.leftMargin: 30
                     anchors.rightMargin: 30
-                    text: appController.message || ("F" + (appController.config.saveKey - 111) + " : replay   ·   F" + (appController.config.recordKey - 111) + " : enregistrement   ·   F" + (appController.config.screenshotKey - 111) + " : capture d’écran")
+                    text: appController.message || ("F" + (appController.config.saveKey - 111) + " : sauvegarder un clip")
                     color: Theme.secondary
                     font.pixelSize: 12
                     wrapMode: Text.Wrap

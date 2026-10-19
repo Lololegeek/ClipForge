@@ -31,8 +31,6 @@ QJsonObject Settings::json() const {
     STR(bitrate);
     STR(memoryMB);
     STR(saveKey);
-    STR(recordKey);
-    STR(screenshotKey);
     STR(systemVolume);
     STR(micVolume);
     STR(closeToTray);
@@ -70,8 +68,6 @@ Settings Settings::fromJson(const QJsonObject &o) {
     I(bitrate);
     I(memoryMB);
     I(saveKey);
-    I(recordKey);
-    I(screenshotKey);
     B(closeToTray);
     B(autoCapture);
     B(startMinimized);
@@ -104,10 +100,8 @@ QString Settings::validate() const {
         return "Mode ou codec non pris en charge.";
     if (!QStringList{"disabled", "system", "process"}.contains(audio))
         return "Source audio invalide.";
-    if (saveKey < 0x70 || saveKey > 0x87 || recordKey < 0x70 || recordKey > 0x87 || screenshotKey < 0x70 ||
-        screenshotKey > 0x87 || saveKey == recordKey || saveKey == screenshotKey ||
-        recordKey == screenshotKey)
-        return "Choisissez trois touches distinctes entre F1 et F24.";
+    if (saveKey < 0x70 || saveKey > 0x87)
+        return "Choisissez une touche entre F1 et F24.";
     if (!std::isfinite(systemVolume) || !std::isfinite(micVolume) || systemVolume < 0 || systemVolume > 2 ||
         micVolume < 0 || micVolume > 2)
         return "Volumes invalides.";

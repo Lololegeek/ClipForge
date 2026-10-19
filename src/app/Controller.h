@@ -22,7 +22,6 @@ class Controller : public QObject {
     Q_PROPERTY(QString encoder READ encoder NOTIFY changed)
     Q_PROPERTY(QString currentGame READ currentGame NOTIFY changed)
     Q_PROPERTY(bool engineReady READ engineReady NOTIFY changed)
-    Q_PROPERTY(bool recording READ recording NOTIFY changed)
     Q_PROPERTY(bool quitting READ quitting NOTIFY changed)
     Q_PROPERTY(QVariantMap config READ config NOTIFY configChanged)
     Q_PROPERTY(QVariantMap metrics READ metrics NOTIFY changed)
@@ -62,9 +61,6 @@ class Controller : public QObject {
     }
     bool engineReady() const {
         return ready_;
-    }
-    bool recording() const {
-        return recording_;
     }
     bool quitting() const {
         return quitting_;
@@ -125,8 +121,7 @@ class Controller : public QObject {
     Q_INVOKABLE void start();
     Q_INVOKABLE void stop();
     Q_INVOKABLE void saveReplay();
-    Q_INVOKABLE void toggleRecording();
-    Q_INVOKABLE void screenshot();
+    void toggleRecording(); // self-test only
     Q_INVOKABLE bool apply(QVariantMap settings);
     Q_INVOKABLE void selectClip(int index);
     Q_INVOKABLE void importVideos();
@@ -175,7 +170,7 @@ class Controller : public QObject {
     QTimer detection_, updateTimer_;
     int quitAttempts_ = 0;
     Overlay *overlay_ = nullptr;
-    QElapsedTimer saveGate_, recordGate_, shotGate_, notifyGate_;
+    QElapsedTimer saveGate_, recordGate_, notifyGate_;
     QString lastNotice_;
     bool gate(QElapsedTimer &t, int ms);
     void toast(const QString &title, const QString &subtitle, int kind);

@@ -7,14 +7,14 @@ import "../components"
 ColumnLayout {
     spacing: 22
     Text {
-        text: "Enregistrer"
+        text: "Capture"
         color: Theme.text
         font.pixelSize: 28
         font.weight: Font.DemiBold
     }
     Text {
         Layout.fillWidth: true
-        text: "Le replay garde les dernières secondes. L'enregistrement conserve toute la session, jusqu'à son arrêt."
+        text: "Le replay garde les dernières secondes. Appuie sur F" + (appController.config.saveKey - 111) + " pour en faire un clip."
         color: Theme.secondary
         wrapMode: Text.Wrap
     }
@@ -47,15 +47,6 @@ ColumnLayout {
                     primary: true
                     enabled: appController.engineReady && ["Saving", "Initializing", "Stopping"].indexOf(appController.state) < 0
                     onClicked: appController.state === "Idle" || appController.state === "Error" ? appController.start() : appController.stop()
-                }
-                ActionButton {
-                    text: appController.recording ? "Terminer l'enregistrement" : "Enregistrer · F9"
-                    enabled: appController.engineReady && ["Initializing", "Stopping"].indexOf(appController.state) < 0
-                    onClicked: appController.toggleRecording()
-                }
-                ActionButton {
-                    text: "Capture écran · F10"
-                    onClicked: appController.screenshot()
                 }
             }
         }
