@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClipForge — Replay et clips pour Windows</title>
+<meta name="description" content="ClipForge garde les dernières secondes de ton jeu en mémoire. Appuie sur F8, le moment est sauvegardé. Hors ligne, sans compte, open source.">
+<meta name="theme-color" content="#101119">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10H3Z"/><path d="M9 20v-7h6v7"/></symbol>
+  <symbol id="i-clips" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9.5 5 2.5-5 2.5Z"/></symbol>
+  <symbol id="i-record" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16Z"/><path d="m13 7 4 4"/></symbol>
+  <symbol id="i-games" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="11" rx="4"/><path d="M8 10v5M5.5 12.5h5M16 11h.01M18 14h.01"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></symbol>
+  <symbol id="i-win" viewBox="0 0 24 24"><path d="M3 5.5 10.5 4.5v7H3Zm8.5-1.1L21 3v8.5h-9.5ZM3 12.5h7.5v7L3 18.5Zm8.5 0H21V21l-9.5-1.4Z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-git" viewBox="0 0 24 24"><path d="M9 19c-4 1.2-4-2-6-2.5m12 4.5v-3.5a3 3 0 0 0-.8-2.3c2.800-.3 5.800-1.400 5.800-6.200a4.800 4.800 0 0 0-1.300-3.300 4.500 4.500 0 0 0-.1-3.300s-1.100-.3-3.500 1.300a12 12 0 0 0-6.200 0C6.500 2.600 5.400 3 5.400 3a4.500 4.500 0 0 0-.1 3.300A4.800 4.800 0 0 0 4 9.600c0 4.800 3 5.900 5.800 6.200A3 3 0 0 0 9 18v3.500"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z" fill="currentColor" stroke="none"/></symbol>
+</svg>
+
+<a class="skip" href="#contenu">Aller au contenu</a>
+
+<header class="top">
+  <a class="brand" href="#" aria-label="ClipForge, accueil">
+    <img src="assets/favicon.svg" width="30" height="30" alt="">
+    <span>ClipForge</span>
+  </a>
+  <nav aria-label="Principal">
+    <a href="#touches">Touches</a>
+    <a href="#appli">L'application</a>
+    <a href="#technique">Technique</a>
+    <a href="#limites">Limites</a>
+  </nav>
+  <a class="btn btn-small" href="#telecharger">Télécharger</a>
+</header>
+
+<main id="contenu">
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap">
+    <p class="eyebrow"><span class="dot"></span> Windows · hors ligne · sans compte · GPLv3</p>
+    <h1>Garde<br>le meilleur.</h1>
+    <p class="lede">ClipForge garde en mémoire les dernières secondes de ton jeu. Quand il se passe quelque chose, appuie sur <kbd>F8</kbd>. Le jeu continue, le moment reste.</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="#telecharger"><svg class="ico"><use href="#i-win"/></svg> Télécharger pour Windows</a>
+      <a class="btn" href="https://github.com/Lololegeek/ClipForge"><svg class="ico"><use href="#i-git"/></svg> Voir le code</a>
+    </div>
+    <p class="fine">Version 0.1 · Windows 10/11 x64 · aucune connexion requise</p>
+  </div>
+
+  <div class="wrap wide">
+    <div class="ruler" id="ruler" aria-label="Démonstration du tampon de replay">
+      <div class="ruler-head">
+        <span class="ruler-title">Instant Replay</span>
+        <span class="ruler-time mono"><b id="rTime">0</b> / 120 s</span>
+      </div>
+      <div class="ruler-track" id="rTrack">
+        <div class="ruler-fill" id="rFill"></div>
+        <div class="ruler-save" id="rSave"></div>
+        <div class="ruler-ticks" id="rTicks" aria-hidden="true"></div>
+      </div>
+      <div class="ruler-foot">
+        <ul class="ruler-clips" id="rClips" aria-live="polite"></ul>
+        <button class="keycap" id="rKey" type="button" aria-label="Sauvegarder les 30 dernières secondes (F8)">
+          <span class="keycap-top">F8</span>
+          <span class="keycap-sub">Sauvegarder</span>
+        </button>
+      </div>
+    </div>
+    <p class="demo-note">Démo : le tampon se remplit, <kbd>F8</kbd> (ou le bouton) en extrait les 30 dernières secondes.</p>
+  </div>
+</section>
+
+<!-- TOUCHES -->
+<section id="touches" class="sec">
+  <div class="wrap">
+    <h2>Trois touches.<br>Rien d'autre à apprendre.</h2>
+    <ol class="keys">
+      <li>
+        <kbd class="big">F8</kbd>
+        <div>
+          <h3>Sauvegarder le replay</h3>
+          <p>Les dernières secondes du tampon (durée et mémoire réglables) sont écrites en MP4. Plusieurs sauvegardes d'affilée sont mises en file, jamais perdues.</p>
+        </div>
+      </li>
+      <li>
+        <kbd class="big">F9</kbd>
+        <div>
+          <h3>Enregistrer la session</h3>
+          <p>Démarre et arrête un enregistrement continu. Le fichier est un MKV : s'il y a un plantage, ce qui a été écrit reste lisible.</p>
+        </div>
+      </li>
+      <li>
+        <kbd class="big">F10</kbd>
+        <div>
+          <h3>Capture d'écran</h3>
+          <p>Une image de l'écran principal, tout de suite. Les trois touches se changent dans Paramètres (F1 à F24).</p>
+        </div>
+      </li>
+    </ol>
+    <p class="tray">Fermer la fenêtre garde la capture active dans la zone de notification. Quitter se fait depuis l'icône.</p>
+  </div>
+</section>
+
+<!-- APPLI -->
+<section id="appli" class="sec sec-app">
+  <div class="wrap wide">
+    <div class="sec-head">
+      <h2>L'application.</h2>
+      <p>Une barre latérale, six pages, l'état de la capture toujours visible en haut. Le thème sombre est pensé pour être consulté pendant que le jeu tourne.</p>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Pages de l'application">
+      <button role="tab" aria-selected="true" aria-controls="win" data-p="home" id="t-home">Accueil</button>
+      <button role="tab" aria-selected="false" aria-controls="win" data-p="clips" id="t-clips">Mes clips</button>
+      <button role="tab" aria-selected="false" aria-controls="win" data-p="editor" id="t-editor">Éditeur</button>
+      <button role="tab" aria-selected="false" aria-controls="win" data-p="record" id="t-record">Enregistrer</button>
+    </div>
+
+    <div class="stage" id="stage">
+      <div class="win" id="win" role="tabpanel" aria-live="polite">
+        <aside class="side">
+          <div class="side-brand"><img src="assets/favicon.svg" width="30" height="30" alt=""><span>ClipForge</span></div>
+          <ul class="side-nav" id="sideNav">
+            <li data-p="home"><svg><use href="#i-home"/></svg>Accueil</li>
+            <li data-p="clips"><svg><use href="#i-clips"/></svg>Mes clips</li>
+            <li data-p="record"><svg><use href="#i-record"/></svg>Enregistrer</li>
+            <li data-p="editor"><svg><use href="#i-edit"/></svg>Éditeur</li>
+            <li><svg><use href="#i-games"/></svg>Jeux</li>
+            <li><svg><use href="#i-settings"/></svg>Paramètres</li>
+          </ul>
+          <div class="side-foot"><span>LOCAL, PAR DÉFAUT</span><small>ClipForge 0.1 · GPLv3</small></div>
+        </aside>
+        <div class="main">
+          <div class="bar">
+            <i class="live"></i><span>Instant Replay actif</span>
+            <em>Aucun profil de jeu actif</em>
+            <span class="pill">Sauvegarder · F8</span>
+          </div>
+          <div class="page" id="page"></div>
+          <div class="status">F8 : replay &nbsp;·&nbsp; F9 : enregistrement &nbsp;·&nbsp; F10 : capture d’écran</div>
+        </div>
+      </div>
+    </div>
+    <p class="caption">Rendu HTML fidèle aux pages QML de l'application, pas une capture d'écran. Les noms de clips, miniatures et valeurs affichés sont des exemples.</p>
+  </div>
+</section>
+
+<!-- TECHNIQUE -->
+<section id="technique" class="sec">
+  <div class="wrap">
+    <h2>Natif, local,<br>sans détour.</h2>
+    <div class="spec">
+      <div class="spec-row"><span class="k">Capture</span><p>Écran via DXGI, fenêtre via Windows Graphics Capture, ou source jeu OBS standard. Tampon de replay compressé en RAM par libobs.</p></div>
+      <div class="spec-row"><span class="k">Encodage</span><p>AMF, NVENC et QSV détectés et sélectionnables. Repli H.264 x264. HEVC et AV1 matériels disponibles selon la carte.</p></div>
+      <div class="spec-row"><span class="k">Audio</span><p>Son du système ou d'un processus (WASAPI), micro au choix, gain et sourdine par source. Une piste AAC mixée.</p></div>
+      <div class="spec-row"><span class="k">Bibliothèque</span><p>SQLite local : recherche, tri, favoris, tags, renommage, corbeille, import. Un fichier déplacé est signalé, pas perdu en silence.</p></div>
+      <div class="spec-row"><span class="k">Montage</span><p>Non destructif : plusieurs passages d'une même source, vitesse, gain, annuler/rétablir, projets enregistrés. Export MP4 H.264 ou HEVC. L'original n'est jamais touché.</p></div>
+      <div class="spec-row"><span class="k">Jeux</span><p>Tu attribues un profil à un exécutable ; la capture démarre et s'arrête avec lui. Un processus inconnu n'est jamais pris pour un jeu.</p></div>
+    </div>
+    <p class="stack mono">C++20 · Qt Quick · libobs · FFmpeg · SQLite</p>
+  </div>
+</section>
+
+<!-- LIMITES -->
+<section id="limites" class="sec sec-limits">
+  <div class="wrap">
+    <h2>Ce qui n'est pas<br>encore là.</h2>
+    <p class="sec-intro">ClipForge en est à sa version 0.1. Voilà, sans arrondir, ce qui est vérifié et ce qui ne l'est pas.</p>
+    <div class="limits">
+      <div>
+        <h3>Vérifié sur la machine de test</h3>
+        <ul>
+          <li>Capture écran, replay et enregistrement avec AMF H.264 et x264</li>
+          <li>Horodatage audio/vidéo des fichiers exportés</li>
+          <li>Bibliothèque, montage, export, sauvegarde atomique des réglages</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Pas encore testé ou absent</h3>
+        <ul>
+          <li>NVENC, QSV, HEVC et AV1 sur d'autres cartes</li>
+          <li>Comportement avec de vrais jeux et leurs anti-triche</li>
+          <li>Pas d'overlay en jeu ; F10 capture le bureau, pas l'image du jeu</li>
+          <li>Exports toujours réencodés, sans texte, sous-titres ni transitions</li>
+          <li>Replay uniquement en RAM, pas sur disque</li>
+          <li>Windows 10 et machine vierge : vérifications de publication à faire</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TÉLÉCHARGER -->
+<section id="telecharger" class="sec sec-dl">
+  <div class="wrap dl">
+    <div class="dl-main">
+      <h2>Télécharger.</h2>
+      <p class="sec-intro">Windows 10/11 x64. Installation par utilisateur, sans droits administrateur, sans activation en ligne.</p>
+      <div class="cta">
+        <a class="btn btn-primary btn-lg" href="https://github.com/Lololegeek/ClipForge/releases/latest"><svg class="ico"><use href="#i-win"/></svg> Dernière version</a>
+        <a class="btn btn-lg" href="https://github.com/Lololegeek/ClipForge/archive/refs/heads/main.zip">Code source (.zip)</a>
+      </div>
+      <p class="fine">Le premier installateur public n'est pas encore publié : la distribution attend la fin de l'inventaire des sources tierces (OBS, FFmpeg, Qt), obligatoire en GPL. En attendant, compile depuis les sources.</p>
+    </div>
+    <div class="dl-build">
+      <div class="code-head"><span>PowerShell 7</span><button class="copy" id="copy" type="button"><svg class="ico"><use href="#i-copy"/></svg><span>Copier</span></button></div>
+<pre id="code"><code>git clone https://github.com/Lololegeek/ClipForge
+cd ClipForge
+./scripts/bootstrap.ps1
+./scripts/build.ps1
+./scripts/package.ps1
+# → dist/ClipForge/ClipForge.exe</code></pre>
+      <p class="fine">Prérequis : Visual Studio (MSVC x64) + Windows SDK, CMake, Ninja, 7-Zip, FFmpeg/FFprobe. Détails dans <a href="https://github.com/Lololegeek/ClipForge/blob/main/docs/BUILDING.md">docs/BUILDING.md</a>.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div class="brand"><img src="assets/favicon.svg" width="26" height="26" alt=""><span>ClipForge</span></div>
+    <p>Logiciel libre sous licence GPL-3.0-or-later. Aucune télémétrie, aucun compte.</p>
+    <p class="links"><a href="https://github.com/Lololegeek/ClipForge">GitHub</a><a href="https://github.com/Lololegeek/ClipForge/blob/main/docs/FEATURES.md">Fonctionnalités</a><a href="https://github.com/Lololegeek/ClipForge/blob/main/THIRD_PARTY.md">Licences tierces</a></p>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
