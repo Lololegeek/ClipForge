@@ -1,4 +1,5 @@
 #include "Controller.h"
+#include "Overlay.h"
 #include "platform/WindowCatalog.h"
 #include <QApplication>
 #include <QClipboard>
@@ -31,24 +32,40 @@ void Controller::stop() {
     QMetaObject::invokeMethod(engine_, &ObsEngine::stop);
 }
 void Controller::saveReplay() {
+    if (state_ != "Buffering" && state_ != "Recording" && state_ != "Saving") {
+        notify("Activez d'abord l'Instant Replay.", true);
+        toast("Replay inactif", "Activez l'Instant Replay pour clipper.", Overlay::Error);
+        return;
+    }
+    // One clip at a time and at most one request per 1.5 s: mashing the key must not queue dozens of files.
+    if (state_ == "Saving" || !gate(saveGate_, 1500))
+        return;
+    toast("Clip en cours…", "Sauvegarde des dernières secondes", Overlay::Progress);
     QMetaObject::invokeMethod(engine_, &ObsEngine::saveReplay);
 }
 void Controller::toggleRecording() {
+    if (!gate(recordGate_, 1500))
+        return;
     if (state_ == "Idle" || state_ == "Error")
         start();
     QMetaObject::invokeMethod(engine_, &ObsEngine::toggleRecording);
 }
 void Controller::screenshot() {
+    if (!gate(shotGate_, 800))
+        return;
     auto screen = QGuiApplication::primaryScreen();
     if (!screen)
         return;
     QDir().mkpath(settings_.clips);
     auto path = settings_.clips + "/Capture " +
                 QDateTime::currentDateTime().toString("yyyy-MM-dd HH-mm-ss-zzz") + ".png";
-    if (screen->grabWindow(0).save(path))
+    if (screen->grabWindow(0).save(path)) {
         notify("Capture de l'écran principal sauvegardée : " + path);
-    else
+        toast("Capture d'écran enregistrée", QFileInfo(path).fileName(), Overlay::Success);
+    } else {
         notify("Capture d'écran impossible.", true);
+        toast("Capture d'écran impossible", {}, Overlay::Error);
+    }
 }
 bool Controller::apply(QVariantMap v) {
     if (state_ != "Idle" && state_ != "Error") {

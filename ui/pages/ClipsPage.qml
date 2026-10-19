@@ -173,94 +173,130 @@ ColumnLayout {
                 onTapped: if (!missing)
                     appController.selectClip(index)
             }
-            ActionButton {
+            Button {
                 id: menuButton
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 anchors.margins: 8
-                implicitWidth: 34
-                text: "⋯"
-                onClicked: {
-                    page.contextClip = {
-                        id: clipId,
-                        name: clipName,
-                        path: filePath,
-                        favorite: favorite,
-                        tags: tags
-                    };
-                    context.open();
+                width: 34
+                height: 34
+                hoverEnabled: true
+                opacity: hover.hovered || hovered || page.listMode || context.visible ? 1 : 0
+                Behavior on opacity {
+                    NumberAnimation { duration: 120 }
+                }
+                Accessible.name: "Actions du clip"
+                HoverHandler {
+                    cursorShape: Qt.PointingHandCursor
+                }
+                background: Rectangle {
+                    radius: 17
+                    color: menuButton.down ? Theme.accentSurface : menuButton.hovered ? Theme.line : "#c0101119"
+                    border.color: menuButton.activeFocus ? Theme.accent : "transparent"
+                    border.width: 2
+                }
+                contentItem: Row {
+                    spacing: 3
+                    anchors.centerIn: parent
+                    Repeater {
+                        model: 3
+                        Rectangle {
+                            width: 4
+                            height: 4
+                            radius: 2
+                            color: Theme.text
+                        }
+                    }
+                }
+                onClicked: openMenu(clipId, clipName, filePath, favorite, tags, menuButton, 0, height + 4)
+            }
+            TapHandler {
+                acceptedButtons: Qt.RightButton
+                onTapped: function (point) {
+                    openMenu(clipId, clipName, filePath, favorite, tags, parent, point.position.x, point.position.y);
                 }
             }
         }
     }
-    Menu {
+    function openMenu(id, name, path, favorite, tags, anchorItem, x, y) {
+        page.contextClip = {
+            id: id,
+            name: name,
+            path: path,
+            favorite: favorite,
+            tags: tags
+        };
+        context.popup(anchorItem, x, y);
+    }
+    CMenu {
         id: context
-        MenuItem {
+        CMenuItem {
             text: page.contextClip.favorite ? "Retirer des favoris" : "Ajouter aux favoris"
             onTriggered: clipLibrary.favorite(page.contextClip.id, !page.contextClip.favorite)
         }
-        MenuItem {
+        CMenuItem {
             text: "Renommer"
             onTriggered: {
                 editName.text = page.contextClip.name;
                 rename.open();
+                editName.forceActiveFocus();
+                editName.selectAll();
             }
         }
-        MenuItem {
+        CMenuItem {
             text: "Modifier les tags"
             onTriggered: {
                 editTags.text = page.contextClip.tags;
                 tagDialog.open();
+                editTags.forceActiveFocus();
             }
         }
-        MenuItem {
+        CMenuItem {
             text: "Copier le chemin"
             onTriggered: appController.copyPath(page.contextClip.path)
         }
-        MenuItem {
+        CMenuItem {
             text: "Afficher dans l'Explorateur"
             onTriggered: appController.reveal(page.contextClip.path)
         }
-        MenuSeparator {}
-        MenuItem {
+        CMenuSeparator {}
+        CMenuItem {
             text: "Mettre à la corbeille…"
+            danger: true
             onTriggered: deletion.open()
         }
     }
-    Dialog {
+    CDialog {
         id: deletion
         title: "Mettre ce clip à la corbeille ?"
-        modal: true
-        anchors.centerIn: Overlay.overlay
-        standardButtons: Dialog.Yes | Dialog.No
-        Label {
-            text: page.contextClip.name || ""
-        }
+        body: "« " + (page.contextClip.name || "") + " » sera déplacé dans la corbeille Windows. Tu pourras le restaurer depuis l'Explorateur."
+        acceptText: "Mettre à la corbeille"
+        danger: true
         onAccepted: clipLibrary.remove(page.contextClip.id, true)
     }
-    Dialog {
+    CDialog {
         id: rename
         title: "Renommer le clip"
-        modal: true
-        anchors.centerIn: Overlay.overlay
-        standardButtons: Dialog.Save | Dialog.Cancel
+        acceptText: "Enregistrer"
+        acceptEnabled: editName.text.trim().length > 0
+        onAccepted: clipLibrary.rename(page.contextClip.id, editName.text.trim())
         CField {
             id: editName
-            width: 320
+            Layout.fillWidth: true
+            onAccepted: rename.submit()
         }
-        onAccepted: clipLibrary.rename(page.contextClip.id, editName.text)
     }
-    Dialog {
+    CDialog {
         id: tagDialog
         title: "Tags du clip"
-        modal: true
-        anchors.centerIn: Overlay.overlay
-        standardButtons: Dialog.Save | Dialog.Cancel
+        body: "Sépare les tags par des virgules."
+        acceptText: "Enregistrer"
+        onAccepted: clipLibrary.tags(page.contextClip.id, editTags.text)
         CField {
             id: editTags
-            width: 320
+            Layout.fillWidth: true
             placeholderText: "victoire, équipe, finale"
+            onAccepted: tagDialog.submit()
         }
-        onAccepted: clipLibrary.tags(page.contextClip.id, editTags.text)
     }
 }

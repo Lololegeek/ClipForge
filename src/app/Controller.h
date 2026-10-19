@@ -4,13 +4,16 @@
 #include "hotkeys/GlobalHotkeys.h"
 #include "Updater.h"
 #include "library/ClipModel.h"
+#include <QElapsedTimer>
 #include <QJsonArray>
+#include <QCoreApplication>
 #include <QObject>
 #include <QThread>
 #include <QTimer>
 #include <QVariantMap>
 class QSystemTrayIcon;
 namespace cf {
+class Overlay;
 class Controller : public QObject {
     Q_OBJECT
     Q_PROPERTY(QString state READ state NOTIFY changed)
@@ -32,6 +35,7 @@ class Controller : public QObject {
     Q_PROPERTY(bool exportBusy READ exportBusy NOTIFY changed)
     Q_PROPERTY(double exportProgress READ exportProgress NOTIFY changed)
     Q_PROPERTY(QString lastClip READ lastClip NOTIFY changed)
+    Q_PROPERTY(QString version READ version CONSTANT)
     Q_PROPERTY(bool autostart READ autostart NOTIFY changed)
     Q_PROPERTY(QString updateState READ updateState NOTIFY changed)
     Q_PROPERTY(QString updateVersion READ updateVersion NOTIFY changed)
@@ -95,6 +99,9 @@ class Controller : public QObject {
     }
     QString lastClip() const {
         return lastClip_;
+    }
+    QString version() const {
+        return QCoreApplication::applicationVersion();
     }
     bool autostart() const;
     QString updateState() const {
@@ -167,6 +174,11 @@ class Controller : public QObject {
     QSystemTrayIcon *tray_ = nullptr;
     QTimer detection_, updateTimer_;
     int quitAttempts_ = 0;
+    Overlay *overlay_ = nullptr;
+    QElapsedTimer saveGate_, recordGate_, shotGate_, notifyGate_;
+    QString lastNotice_;
+    bool gate(QElapsedTimer &t, int ms);
+    void toast(const QString &title, const QString &subtitle, int kind);
     bool ready_ = false, recording_ = false, test_ = false, quitting_ = false, autoStarted_ = false;
     QVariantMap metrics_, selected_;
     QVariantList encoders_, targets_, microphones_, games_;

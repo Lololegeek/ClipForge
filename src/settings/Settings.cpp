@@ -38,7 +38,7 @@ QJsonObject Settings::json() const {
     STR(closeToTray);
     STR(autoCapture);
     STR(startMinimized);
-    STR(overlay);
+    STR(gameOverlay);
     STR(autoUpdate);
     STR(profiles);
 #undef STR
@@ -75,7 +75,7 @@ Settings Settings::fromJson(const QJsonObject &o) {
     B(closeToTray);
     B(autoCapture);
     B(startMinimized);
-    B(overlay);
+    B(gameOverlay);
     B(autoUpdate);
     if (o.contains("profiles"))
         s.profiles = o["profiles"].toObject();

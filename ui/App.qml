@@ -123,7 +123,7 @@ ApplicationWindow {
                 }
                 Text {
                     Layout.bottomMargin: 14
-                    text: "ClipForge 0.1 · GPLv3"
+                    text: "ClipForge " + appController.version + " · GPLv3"
                     color: Theme.secondary
                     font.pixelSize: 11
                 }

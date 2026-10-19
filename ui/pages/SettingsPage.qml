@@ -67,6 +67,7 @@ ColumnLayout {
         draft.autoCapture = automatic.checked;
         draft.startMinimized = minimized.checked;
         draft.autoUpdate = autoUpdate.checked;
+        draft.gameOverlay = gameOverlay.checked;
         draft.saveKey = saveKey.model[saveKey.currentIndex].value;
         draft.recordKey = recordKey.model[recordKey.currentIndex].value;
         draft.screenshotKey = shotKey.model[shotKey.currentIndex].value;
@@ -459,6 +460,11 @@ ColumnLayout {
                 onToggled: appController.setAutostart(checked)
             }
             CheckBox {
+                id: gameOverlay
+                text: "Afficher une notification en jeu (3 s) quand un clip est sauvegardé"
+                checked: settings.draft.gameOverlay
+            }
+            CheckBox {
                 id: autoUpdate
                 text: "Télécharger automatiquement les mises à jour"
                 checked: settings.draft.autoUpdate
@@ -513,7 +519,7 @@ ColumnLayout {
             }
             Text {
                 Layout.topMargin: 16
-                text: "ClipForge 0.1 · C++20 / Qt 6 / libobs / FFmpeg / SQLite\nLogiciel libre GPLv3 · local, sans compte, sans télémétrie"
+                text: "ClipForge " + appController.version + " · C++20 / Qt 6 / libobs / FFmpeg / SQLite\nLogiciel libre GPLv3 · local, sans compte, sans télémétrie"
                 color: Theme.secondary
                 font.pixelSize: 12
                 lineHeight: 1.7

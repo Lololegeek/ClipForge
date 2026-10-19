@@ -8,6 +8,8 @@ Run `dist/ClipForge/ClipForge.exe`. Open **Paramètres**, select the screen/wind
 
 ClipForge vérifie les nouvelles versions sur GitHub (désactivable dans **Paramètres**) et, pour une installation via l'installateur, télécharge puis installe la mise à jour à la fermeture.
 
+Une notification en jeu de 3 secondes confirme chaque clip, enregistrement et capture (fenêtre ou plein écran sans bordure ; désactivable dans **Paramètres**). Les raccourcis sont protégés contre le spam : un clip à la fois, 1,5 s minimum entre deux demandes.
+
 Use **Mes clips** to play a video and open the editor. Choose start/end points and click **Garder ce passage** to trim; **Ajouter** appends another passage. Export a new MP4. Originals are preserved. Saved recordings are MKV for crash resilience; the editor exports MP4. Replay files are MP4.
 
 ## Build

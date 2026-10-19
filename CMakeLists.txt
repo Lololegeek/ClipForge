@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(ClipForge VERSION 0.1.1 LANGUAGES CXX)
+project(ClipForge VERSION 0.2.0 LANGUAGES CXX)
 if(CMAKE_CXX_CL_SHOWINCLUDES_PREFIX MATCHES "inclusion du fichier")
   # Some French-only MSVC kits emit UTF-8 but CMake probes the prefix as OEM text.
   set(CMAKE_CL_SHOWINCLUDES_PREFIX "Remarque : inclusion du fichier :  ")
@@ -31,7 +31,8 @@ add_library(clipforge_core STATIC
 target_include_directories(clipforge_core PUBLIC src)
 target_link_libraries(clipforge_core PUBLIC Qt6::Core Qt6::Gui Qt6::Sql Qt6::Multimedia obs user32 shell32 psapi ole32)
 qt_add_executable(ClipForge WIN32 src/app/main.cpp src/app/Controller.cpp src/app/Controller.h
- src/app/Updater.cpp src/app/Updater.h src/app/CaptureActions.cpp src/app/LibraryActions.cpp src/app/EditActions.cpp src/app/GameProfiles.cpp)
+ src/app/Updater.cpp src/app/Updater.h src/app/Overlay.cpp src/app/Overlay.h src/app/CaptureActions.cpp src/app/LibraryActions.cpp src/app/EditActions.cpp src/app/GameProfiles.cpp)
+target_compile_definitions(ClipForge PRIVATE CF_VERSION="${PROJECT_VERSION}")
 configure_file(packaging/windows.rc.in "${CMAKE_BINARY_DIR}/windows.rc" @ONLY)
 set_source_files_properties("${CMAKE_BINARY_DIR}/windows.rc" PROPERTIES
   OBJECT_DEPENDS "${CMAKE_SOURCE_DIR}/assets/ClipForge.ico")
@@ -39,7 +40,7 @@ target_sources(ClipForge PRIVATE "${CMAKE_BINARY_DIR}/windows.rc")
 target_link_libraries(ClipForge PRIVATE clipforge_core Qt6::Widgets Qt6::Quick Qt6::QuickControls2 Qt6::Multimedia Qt6::Network)
 qt_add_resources(ClipForge ui PREFIX "/" FILES
  ui/App.qml ui/theme/Theme.qml ui/theme/qmldir
- ui/components/ActionButton.qml ui/components/Panel.qml ui/components/CField.qml ui/components/CCombo.qml ui/components/CSlider.qml
+ ui/components/ActionButton.qml ui/components/Panel.qml ui/components/CField.qml ui/components/CCombo.qml ui/components/CSlider.qml ui/components/CDialog.qml ui/components/CMenu.qml ui/components/CMenuItem.qml ui/components/CMenuSeparator.qml
  ui/pages/HomePage.qml ui/pages/ClipsPage.qml ui/pages/RecordPage.qml
  ui/pages/EditorPage.qml ui/pages/GamesPage.qml ui/pages/SettingsPage.qml
  assets/icons/home.svg assets/icons/clips.svg assets/icons/record.svg

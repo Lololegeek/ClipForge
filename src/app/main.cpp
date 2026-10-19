@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
     app.setFont(QFont("Segoe UI", 10));
     app.setApplicationName("ClipForge");
     app.setOrganizationName("ClipForge");
-    app.setApplicationVersion("0.1.1");
+    app.setApplicationVersion(CF_VERSION);
     app.setDesktopFileName("ClipForge");
     app.setWindowIcon(QIcon(":/assets/ClipForge.ico"));
     app.setQuitOnLastWindowClosed(false);

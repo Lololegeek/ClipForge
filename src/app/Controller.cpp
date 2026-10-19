@@ -1,4 +1,5 @@
 #include "Controller.h"
+#include "Overlay.h"
 #include "platform/WindowCatalog.h"
 #include <QApplication>
 #include <QClipboard>
@@ -64,6 +65,9 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
         emit changed();
     });
     connect(engine_, &ObsEngine::recording, this, [this](bool r) {
+        if (r != recording_)
+            toast(r ? "Enregistrement démarré" : "Enregistrement terminé", r ? "F" + QString::number(settings_.recordKey - 111) + " pour arrêter" : QString(),
+                  r ? Overlay::Info : Overlay::Success);
         recording_ = r;
         emit changed();
     });
@@ -76,13 +80,17 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
             testSamples_.append(QJsonObject::fromVariantMap(metrics_));
         emit changed();
     });
-    connect(engine_, &ObsEngine::failure, this, [this](QString s) { notify(s, true); });
+    connect(engine_, &ObsEngine::failure, this, [this](QString s) {
+        notify(s, true);
+        toast("ClipForge", s, Overlay::Error);
+    });
     connect(&jobs_, &MediaJobs::failure, this, [this](QString s) { notify(s, true); });
     connect(&library_, &ClipModel::failure, this, [this](QString s) { notify(s, true); });
     connect(engine_, &ObsEngine::saved, this, [this](QString p) {
         lastClip_ = p;
         jobs_.import(p, game_);
         notify("Clip sauvegardé : " + QFileInfo(p).fileName());
+        toast("Clip sauvegardé", QFileInfo(p).fileName(), Overlay::Success);
     });
     connect(&jobs_, &MediaJobs::imported, &library_, &ClipModel::upsert);
     connect(&jobs_, &MediaJobs::thumbnail, &library_, &ClipModel::setThumbnail);
@@ -98,6 +106,7 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
     if (!test_ && !QCoreApplication::arguments().contains("--ui-test") && !QCoreApplication::arguments().contains("--editor-test") &&
         !QCoreApplication::arguments().contains("--screenshot")) {
         connectTray();
+        overlay_ = new Overlay;
         connect(&hotkeys_, &GlobalHotkeys::save, this, &Controller::saveReplay);
         connect(&hotkeys_, &GlobalHotkeys::record, this, &Controller::toggleRecording);
         connect(&hotkeys_, &GlobalHotkeys::screenshot, this, &Controller::screenshot);
@@ -133,6 +142,7 @@ Controller::~Controller() {
     worker_.quit();
     worker_.wait();
     delete tray_;
+    delete overlay_;
 }
 void Controller::connectTray() {
     tray_ = new QSystemTrayIcon(this);
@@ -153,8 +163,26 @@ void Controller::connectTray() {
     connect(tray_, &QObject::destroyed, menu, &QObject::deleteLater);
     tray_->show();
 }
+bool Controller::gate(QElapsedTimer &t, int ms) {
+    if (t.isValid() && t.elapsed() < ms)
+        return false;
+    t.restart();
+    return true;
+}
+void Controller::toast(const QString &title, const QString &subtitle, int kind) {
+    if (overlay_ && settings_.gameOverlay)
+        overlay_->show(title, subtitle, Overlay::Kind(kind));
+}
 void Controller::notify(QString s, bool error) {
     message_ = s;
+    // Identical notices (key mashing, repeated failures) are shown and logged once per few seconds.
+    bool repeat = s == lastNotice_ && notifyGate_.isValid() && notifyGate_.elapsed() < 4000;
+    lastNotice_ = s;
+    notifyGate_.restart();
+    if (repeat) {
+        emit changed();
+        return;
+    }
     qInfo().noquote() << (error ? "ERROR: " : "INFO: ") + s;
     if (tray_)
         tray_->showMessage("ClipForge", s, error ? QSystemTrayIcon::Warning : QSystemTrayIcon::Information,
