@@ -27,7 +27,20 @@ jobs:
           path: .deps
           key: deps-${{ hashFiles('scripts/bootstrap.ps1') }}
       - name: Install FFmpeg and Inno Setup
-        run: choco install ffmpeg innosetup --no-progress -y
+        run: |
+          choco install innosetup --no-progress -y
+          $archive = Join-Path $env:RUNNER_TEMP 'ffmpeg-release-essentials.zip'
+          $checksumFile = Join-Path $env:RUNNER_TEMP 'ffmpeg-release-essentials.zip.sha256'
+          Invoke-WebRequest 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip' -OutFile $archive
+          Invoke-WebRequest 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip.sha256' -OutFile $checksumFile
+          $expected = (Get-Content $checksumFile -Raw).Trim().Split(' ')[0].ToLowerInvariant()
+          $actual = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw 'FFmpeg archive SHA256 mismatch.' }
+          $extract = Join-Path $env:RUNNER_TEMP 'ffmpeg'
+          Expand-Archive $archive $extract -Force
+          $ffmpegDir = (Get-ChildItem $extract -Filter ffmpeg.exe -Recurse | Select-Object -First 1).DirectoryName
+          if (!(Test-Path (Join-Path $ffmpegDir 'ffprobe.exe'))) { throw 'ffprobe.exe missing from FFmpeg package.' }
+          Add-Content $env:GITHUB_PATH $ffmpegDir
       - name: Bootstrap
         run: ./scripts/bootstrap.ps1
       - name: Build
