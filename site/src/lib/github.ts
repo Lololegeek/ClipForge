@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { REPO } from "./site";
+import publishedRelease from "./release.json";
 
 const releaseSchema = z.object({
   tag_name: z.string(),
@@ -17,6 +18,7 @@ const releaseSchema = z.object({
 });
 
 export type Release = z.infer<typeof releaseSchema>;
+export const RELEASE_SNAPSHOT: Release = releaseSchema.parse(publishedRelease);
 
 /** Dernière release publiée, ou `null` si le dépôt n'en a aucune (404). */
 export async function fetchLatestRelease(signal?: AbortSignal): Promise<Release | null> {
@@ -33,7 +35,7 @@ export function pickInstaller(release: Release) {
   return (
     release.assets.find((a) => /setup.*\.exe$/i.test(a.name)) ??
     release.assets.find((a) => /\.(exe|msi)$/i.test(a.name)) ??
-    release.assets.find((a) => /\.zip$/i.test(a.name)) ??
+    release.assets.find((a) => /windows.*x64.*\.zip$/i.test(a.name)) ??
     null
   );
 }

@@ -122,26 +122,7 @@ Controller::~Controller() {
 }
 void Controller::connectTray() {
     tray_ = new QSystemTrayIcon(this);
-    QPixmap pix(64, 64);
-    pix.fill(Qt::transparent);
-    QPainter p(&pix);
-    p.setRenderHint(QPainter::Antialiasing);
-    p.setPen(Qt::NoPen);
-    p.setBrush(QColor("#8c8cff"));
-    p.drawRoundedRect(4, 4, 56, 56, 13, 13);
-    p.setPen(QPen(QColor("#101119"), 5, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-    p.drawLine(25, 18, 17, 18);
-    p.drawLine(17, 18, 17, 26);
-    p.drawLine(39, 18, 47, 18);
-    p.drawLine(47, 18, 47, 26);
-    p.drawLine(17, 38, 17, 46);
-    p.drawLine(17, 46, 25, 46);
-    p.drawLine(47, 38, 47, 46);
-    p.drawLine(47, 46, 39, 46);
-    p.setPen(QPen(QColor("#101119"), 6, Qt::SolidLine, Qt::RoundCap));
-    p.drawLine(25, 39, 39, 25);
-    p.end();
-    tray_->setIcon(QIcon(pix));
+    tray_->setIcon(QApplication::windowIcon());
     tray_->setToolTip("ClipForge · F8 pour sauvegarder");
     auto menu = new QMenu;
     menu->addAction("Ouvrir ClipForge", this, &Controller::showWindow);

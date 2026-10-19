@@ -68,3 +68,6 @@ Desktop.ini
 /site/out/
 /site/next-env.d.ts
 /site/*.tsbuildinfo
+
+# Local browser validation
+/.playwright-cli/

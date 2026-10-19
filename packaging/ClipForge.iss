@@ -1,11 +1,17 @@
 #ifndef SourceDir
  #define SourceDir "..\dist\ClipForge"
 #endif
+#ifndef AppVersion
+ #define AppVersion "0.1.0"
+#endif
 [Setup]
 AppId={{C38E01B3-9388-4B47-ACE2-04EB912F4160}
 AppName=ClipForge
-AppVersion=0.1.0
+AppVersion={#AppVersion}
 AppPublisher=ClipForge contributors
+AppPublisherURL=https://github.com/Lololegeek/ClipForge
+AppSupportURL=https://github.com/Lololegeek/ClipForge/issues
+AppUpdatesURL=https://github.com/Lololegeek/ClipForge/releases/latest
 DefaultDirName={localappdata}\Programs\ClipForge
 DefaultGroupName=ClipForge
 PrivilegesRequired=lowest
@@ -17,6 +23,8 @@ OutputBaseFilename=ClipForge-Setup-x64
 Compression=lzma2/fast
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=..\assets\ClipForge.ico
+VersionInfoVersion={#AppVersion}
 UninstallDisplayIcon={app}\ClipForge.exe
 LicenseFile=..\LICENSE
 CloseApplications=yes

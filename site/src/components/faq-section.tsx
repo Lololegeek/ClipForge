@@ -24,11 +24,11 @@ const FAQ = [
   },
   {
     q: "Puis-je le compiler moi-même ?",
-    a: "Oui, c’est aujourd’hui le moyen d’obtenir ClipForge. Les scripts PowerShell du dépôt téléchargent les dépendances dans un dossier isolé et produisent un dossier portable.",
+    a: "Oui. En plus de l’installateur et de la version portable, les sources sont disponibles sur GitHub. Les scripts PowerShell téléchargent les dépendances dans un dossier isolé et produisent un dossier portable.",
   },
   {
-    q: "Pourquoi n’y a-t-il pas encore d’installateur ?",
-    a: "ClipForge embarque OBS, FFmpeg et Qt, sous GPL ou licences compatibles. Avant de distribuer des binaires, il faut fournir les sources correspondantes de chaque composant : cet inventaire n’est pas terminé.",
+    q: "Comment installer ClipForge ?",
+    a: "Télécharge ClipForge-Setup-x64.exe, puis suis l’assistant. L’installation se fait pour ton compte Windows, sans droits administrateur. Les raccourcis bureau et le démarrage automatique sont facultatifs. Une archive portable est aussi disponible sur GitHub.",
   },
 ];
 

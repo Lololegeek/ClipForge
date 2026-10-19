@@ -10,13 +10,15 @@ import { Github, Windows } from "@/components/icons";
 import { Section, SectionTitle } from "@/components/sections";
 import { Button } from "@/components/ui/button";
 import { formatBytes } from "@/lib/format";
-import { fetchLatestRelease, pickInstaller } from "@/lib/github";
+import { fetchLatestRelease, pickInstaller, RELEASE_SNAPSHOT } from "@/lib/github";
 import { BUILD_COMMANDS, DOCS_URL, RELEASES_URL, REPO_URL, ZIP_URL } from "@/lib/site";
 
 export function DownloadPanel() {
   const { data, isPending, isError, refetch, isFetching } = useQuery({
     queryKey: ["latest-release"],
     queryFn: ({ signal }) => fetchLatestRelease(signal),
+    initialData: RELEASE_SNAPSHOT,
+    staleTime: 60_000,
   });
   const installer = data ? pickInstaller(data) : null;
 
@@ -72,9 +74,7 @@ export function DownloadPanel() {
               Aucune version téléchargeable pour l’instant.
             </p>
             <p className="text-muted mt-3 max-w-md">
-              ClipForge embarque OBS, FFmpeg et Qt. Avant de publier un installateur, il faut réunir
-              les sources correspondantes de chaque composant, comme l’exige la GPL. En attendant,
-              tu peux compiler ClipForge depuis les sources.
+              Consulte la page des versions sur GitHub ou compile ClipForge depuis les sources.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button asChild variant="primary" size="lg">

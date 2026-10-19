@@ -38,3 +38,11 @@ Reproduce:
 Not executed: real-game hooking or FPS impact, anti-cheat game matrix, enabled microphone capture, process-isolated audio capture, Windows 10, clean VM, NVIDIA/Intel hardware, HEVC/AV1 capture, 120/144 FPS, 4K, driver reset/device loss, disk-full fault injection, or multi-hour endurance. These remain release validation work; no result is inferred from source code alone.
 
 Packaging check: portable ZIP and Inno Setup x64 installer generated. Silent per-user installation to an isolated path containing an accented character completed with exit 0. The installed executable initialized its bundled OBS/Qt runtime and played an actual clip in the QML editor with a valid video frame and advancing position (exit 0). Silent uninstall completed with exit 0, no restart, and the isolated installation directory disappeared. Logs: `artifacts/setup-install.log`, `artifacts/installed-runtime/clipforge.log`, `artifacts/setup-uninstall.log`. No normal user clip directory was removed. CTest also passes with DLL/plugin paths supplied by the project configuration. Source/archive hashes and archive-integrity results are emitted alongside the deliverables.
+
+## Release 0.1.0 checks, 19 October 2026
+
+MSVC release build succeeded. Core QtTest: 7 passed; media QtTest: 7 passed. A 32-second WGC fixture run produced two replays and an MKV recording; all files passed full decode, timing, dimensions, FPS and AAC checks. This validates files and playback, not visual fidelity of an off-desktop GDI capture fixture or real-game behavior.
+
+The regenerated Inno Setup installer installed silently to an isolated path containing an accented character, without administrator rights. The installed app initialized its bundled dependencies and passed the editor test (advancing playback and a valid QVideoSink frame). Silent uninstall returned 0, required no reboot and removed the test installation directory. Test data used an isolated directory. Installer version: 0.1.0.
+
+The website passed TypeScript, ESLint and the production static build. Browser checks verified the screenshot tabs, a loaded real editor image, the GitHub installer link and no horizontal overflow at desktop and 390-pixel mobile widths. Screenshot provenance and media attribution are in SCREENSHOTS.md. Windows 10, a clean VM and real-game compatibility remain untested.

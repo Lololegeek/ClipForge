@@ -5,6 +5,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFont>
+#include <QIcon>
 #include <QLockFile>
 #include <QMutex>
 #include <QMutexLocker>
@@ -46,6 +47,7 @@ int main(int argc, char **argv) {
     app.setApplicationName("ClipForge");
     app.setOrganizationName("ClipForge");
     app.setApplicationVersion("0.1.0");
+    app.setWindowIcon(QIcon("qrc:/assets/ClipForge.ico"));
     app.setQuitOnLastWindowClosed(false);
     QQuickStyle::setStyle("Basic");
     qmlRegisterType<cf::PlaybackAudio>("ClipForge.Playback", 1, 0, "PlaybackAudio");
@@ -109,7 +111,7 @@ int main(int argc, char **argv) {
         }
         if (args.contains("--ui-test")) {
             for (int page = 0; page < 6; ++page) {
-                QTimer::singleShot(1200 + page * 1400, &app, [window, page, &controller] {
+                QTimer::singleShot(1200 + page * 4000, &app, [window, page, &controller] {
                     window->setProperty("page", page);
                     if (page == 3 && controller.library()->count() > 0) {
                         controller.selectClip(0);
@@ -124,11 +126,11 @@ int main(int argc, char **argv) {
                             field->setProperty("text", "90");
                     }
                 });
-                QTimer::singleShot(2200 + page * 1400, &app, [window, data, page] {
+                QTimer::singleShot(4500 + page * 4000, &app, [window, data, page] {
                     window->grabWindow().save(data + QString("/page-%1.png").arg(page));
                 });
             }
-            QTimer::singleShot(10100, &app, [window, &app] {
+            QTimer::singleShot(25500, &app, [window, &app] {
                 auto field = window->findChild<QObject *>("replaySecondsField");
                 if (!field || field->property("text").toString() != "90") {
                     qCritical("UI validation failed: settings reset during metrics refresh");
@@ -136,7 +138,7 @@ int main(int argc, char **argv) {
                 } else
                     qInfo("UI validation passed: edited settings survive metrics refresh");
             });
-            QTimer::singleShot(11000, &app, &QApplication::quit);
+            QTimer::singleShot(26000, &app, &QApplication::quit);
         }
         if(args.contains("--editor-test")){
             QTimer::singleShot(1500,&app,[window,&controller]{if(controller.library()->count()>0)controller.selectClip(controller.library()->count()>1?1:0);window->setProperty("page",3);});

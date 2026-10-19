@@ -41,7 +41,8 @@ qt_add_resources(ClipForge ui PREFIX "/" FILES
  ui/pages/HomePage.qml ui/pages/ClipsPage.qml ui/pages/RecordPage.qml
  ui/pages/EditorPage.qml ui/pages/GamesPage.qml ui/pages/SettingsPage.qml
  assets/icons/home.svg assets/icons/clips.svg assets/icons/record.svg
- assets/icons/edit.svg assets/icons/games.svg assets/icons/settings.svg assets/icons/clipforge-mark.svg)
+ assets/icons/edit.svg assets/icons/games.svg assets/icons/settings.svg assets/icons/clipforge-mark.svg
+ assets/ClipForge.ico)
 enable_testing()
 qt_add_executable(core_tests tests/CoreTests.cpp)
 target_link_libraries(core_tests PRIVATE clipforge_core Qt6::Test)

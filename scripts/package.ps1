@@ -31,6 +31,12 @@ Copy-Item .deps/Qt/6.8.3/msvc2022_64/plugins/platforms/qoffscreen.dll "$out/plat
 Copy-Item .deps/Qt/6.8.3/msvc2022_64/bin/Qt6Test.dll $out -Force
 Copy-Item README.md,LICENSE,THIRD_PARTY.md $out -Force
 Copy-Item .deps/obs-source/obs-studio-32.2.2-sources/COPYING "$out/licenses/OBS-GPL.txt" -Force
+if(Test-Path .deps/release-notices/qt-everywhere-src-6.8.3/qtbase/LICENSES){
+ Copy-Item .deps/release-notices/qt-everywhere-src-6.8.3/qtbase/LICENSES "$out/licenses/Qt" -Recurse -Force
+ Copy-Item .deps/release-notices/ffmpeg-7.1.1 "$out/licenses/FFmpeg" -Recurse -Force
+ Copy-Item .deps/Qt/6.8.3/msvc2022_64/sbom "$out/licenses/Qt-SBOM" -Recurse -Force
+ & "$out/tools/ffmpeg.exe" -version | Set-Content "$out/licenses/FFmpeg-build.txt" -Encoding utf8
+}
 Copy-Item docs "$out/docs" -Recurse -Force
 @('[Paths]','Plugins=.','QmlImports=qml') | Set-Content "$out/qt.conf" -Encoding ascii
 if(!$SkipZip){$zipTool=if(Test-Path 'C:\Program Files\7-Zip\7z.exe'){'C:\Program Files\7-Zip\7z.exe'}else{(Get-Command 7z.exe).Source}; & $zipTool a -tzip '-mx=5' '-mmt=2' "$root/dist/ClipForge-Windows-x64.zip" "$out/*" | Out-Null;if($LASTEXITCODE){throw 'ZIP failed (a full 7-Zip installation with ZIP support is required).'}}

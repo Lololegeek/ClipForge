@@ -21,7 +21,7 @@ export default function Home() {
           <SectionTitle>L’application.</SectionTitle>
           <p className="text-muted max-w-md text-lg">
             Une barre latérale, six pages, l’état de la capture toujours visible. Le thème sombre
-            est pensé pour être consulté pendant que le jeu tourne. Essaie : tout est cliquable.
+            est pensé pour être consulté pendant que le jeu tourne. Explore les captures de chaque écran.
           </p>
         </div>
         <Reveal className="mt-12">
