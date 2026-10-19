@@ -40,7 +40,7 @@ if(Test-Path .deps/release-notices/qt-everywhere-src-6.8.3/qtbase/LICENSES){
 }
 Copy-Item docs "$out/docs" -Recurse -Force
 @('[Paths]','Plugins=.','QmlImports=qml') | Set-Content "$out/qt.conf" -Encoding ascii
-if(!$SkipZip){$zipTool=if(Test-Path 'C:\Program Files\7-Zip\7z.exe'){'C:\Program Files\7-Zip\7z.exe'}else{(Get-Command 7z.exe).Source}; & $zipTool a -tzip '-mx=5' '-mmt=2' "$root/dist/ClipForge-Windows-x64.zip" "$out/*" | Out-Null;if($LASTEXITCODE){throw 'ZIP failed (a full 7-Zip installation with ZIP support is required).'}}
+if(!$SkipZip){$zipTool=if(Test-Path 'C:\Program Files\7-Zip\7z.exe'){'C:\Program Files\7-Zip\7z.exe'}else{(Get-Command 7z.exe).Source}; if(Test-Path "$root/dist/ClipForge-Windows-x64.zip"){Remove-Item "$root/dist/ClipForge-Windows-x64.zip" -Force};& $zipTool a -tzip -mm=Deflate '-mx=9' '-mmt=2' '-xr!core_tests.exe' '-xr!media_tests.exe' '-xr!ClipForgeFixture.exe' '-xr!Qt6Test.dll' '-xr!qoffscreen.dll' '-xr!*.pdb' "$root/dist/ClipForge-Windows-x64.zip" "$out/*" | Out-Null;if($LASTEXITCODE){throw 'ZIP failed (a full 7-Zip installation with ZIP support is required).'}}
 Write-Host "Portable application: $out/ClipForge.exe"
 $compiler='C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
 if((Test-Path $compiler) -and !$SkipZip){& $compiler "/DSourceDir=$out" "$root/packaging/ClipForge.iss";if($LASTEXITCODE){throw 'Installer compilation failed.'}}
