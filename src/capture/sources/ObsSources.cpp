@@ -145,7 +145,9 @@ void ObsEngine::start(Settings s) {
     QStringList candidates;
     if (s.encoder != "auto")
         candidates << s.encoder;
-    if (s.codec == "h264")
+    if (s.encoder == "obs_x264") {
+        settings_.codec = "h264";
+    } else if (s.codec == "h264")
         candidates << "h264_texture_amf" << "obs_nvenc_h264_tex" << "obs_qsv11_v2" << "obs_x264";
     else if (s.codec == "hevc")
         candidates << "h265_texture_amf" << "obs_nvenc_hevc_tex" << "obs_qsv11_hevc";
@@ -159,6 +161,10 @@ void ObsEngine::start(Settings s) {
             break;
         }
     }
+    if (!ok && s.encoder != "obs_x264") {
+        settings_.codec = "h264";
+        ok = createOutputs("obs_x264");
+    }
     if (!ok) {
         releasePipeline();
         error("Aucun encodeur compatible n'a démarré. Essayez H.264, 1080p, 30 FPS.");
@@ -168,5 +174,7 @@ void ObsEngine::start(Settings s) {
     elapsed_.start();
     emit method(captureMethod_, encoderName_);
     emit state("Buffering");
+    if (video_ && QString::fromUtf8(obs_encoder_get_id(video_)) == "obs_x264" && s.encoder != "obs_x264")
+        emit notice("Encodeur matériel indisponible : capture en H.264 logiciel (CPU).");
 }
 } // namespace cf

@@ -104,6 +104,13 @@ void ObsEngine::initialize() {
         if (saving_) {
             saving_ = false;
             queuedSaves_ = 0;
+            const QString detail = replay_ ? QString::fromUtf8(obs_output_get_last_error(replay_)) : QString();
+            qWarning().noquote() << "Replay save timed out:" << encoderName_
+                                 << "frames" << (replay_ ? obs_output_get_total_frames(replay_) : 0)
+                                 << "output error" << detail
+                                 << "encoder error" << (video_ ? obs_encoder_get_last_error(video_) : "");
+            if (fallbackToSoftware())
+                return;
             emit failure("La sauvegarde n'a pas abouti en 30 s. Vérifiez le disque et le journal.");
             if (replay_ && obs_output_active(replay_))
                 emit state(recording_ ? "Recording" : "Buffering");

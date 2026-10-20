@@ -10,13 +10,48 @@
 #include <psapi.h>
 #include <windows.h>
 namespace cf {
+bool ObsEngine::fallbackToSoftware() {
+    if (stopping_ || !video_ || QString::fromUtf8(obs_encoder_get_id(video_)) == "obs_x264")
+        return false;
+    const bool wasRecording = recording_;
+    qWarning().noquote() << "Switching failed hardware encoder to software H.264:" << encoderName_;
+    settings_.encoder = "obs_x264";
+    settings_.codec = "h264";
+    saving_ = false;
+    queuedSaves_ = 0;
+    watchdog_->stop();
+    emit state("Initializing");
+    // Keep the existing graphics/audio devices and sources. Resetting D3D while
+    // OBS is asynchronously destroying the failed encoder can deadlock.
+    if (!createOutputs("obs_x264")) {
+        releasePipeline();
+        error("Le repli vers l'encodeur logiciel a échoué. Vérifiez le journal et le disque.");
+        return true; // Failure handled; do not restore a stale Buffering state.
+    }
+    recording_ = false;
+    emit recording(false);
+    elapsed_.restart();
+    emit method(captureMethod_, encoderName_);
+    emit state("Buffering");
+    emit notice(wasRecording
+                    ? "Passage en H.264 logiciel (CPU). Enregistrement interrompu ; tampon réinitialisé."
+                    : "Passage en H.264 logiciel (CPU). Tampon réinitialisé : les prochains clips utiliseront le CPU.");
+    return true;
+}
 bool ObsEngine::createOutputs(const QString &id) {
     ++replayGeneration_;
     if (replay_) {
+        signal_handler_disconnect(obs_output_get_signal_handler(replay_), "saved", onSaved, this);
+        signal_handler_disconnect(obs_output_get_signal_handler(replay_), "stop", onReplayStop, this);
+        if (obs_output_active(replay_))
+            obs_output_force_stop(replay_);
         obs_output_release(replay_);
         replay_ = nullptr;
     }
     if (record_) {
+        signal_handler_disconnect(obs_output_get_signal_handler(record_), "stop", onRecordStop, this);
+        if (obs_output_active(record_))
+            obs_output_force_stop(record_);
         obs_output_release(record_);
         record_ = nullptr;
     }
@@ -38,8 +73,12 @@ bool ObsEngine::createOutputs(const QString &id) {
     obs_data_set_int(e, "bitrate", settings_.bitrate);
     obs_data_set_int(e, "keyint_sec", 2);
     obs_data_set_string(e, "rate_control", "CBR");
-    obs_data_set_string(e, "preset", id == "obs_x264" ? "veryfast" : "balanced");
-    obs_data_set_string(e, "profile", "high");
+    // Presets and profiles belong to the encoder: AMF's "balanced" and H.264's
+    // "high" are not valid choices for every NVENC/QSV codec. Keep OBS defaults.
+    if (id == "obs_x264")
+        obs_data_set_string(e, "preset", "veryfast");
+    else if (id == "h264_texture_amf" || id == "h265_texture_amf")
+        obs_data_set_string(e, "preset", "balanced");
     video_ = obs_video_encoder_create(b.constData(), "ClipForge video encoder", e, nullptr);
     obs_data_release(e);
     if (!video_)
@@ -67,8 +106,14 @@ bool ObsEngine::createOutputs(const QString &id) {
     obs_output_set_audio_encoder(replay_, aac_, 0);
     signal_handler_connect(obs_output_get_signal_handler(replay_), "saved", onSaved, this);
     signal_handler_connect(obs_output_get_signal_handler(replay_), "stop", onReplayStop, this);
-    if (!obs_output_start(replay_))
+    qInfo().noquote() << "Starting replay encoder" << id << "codec" << codec;
+    if (!obs_output_start(replay_)) {
+        qWarning().noquote() << "Replay startup failed:" << id
+                             << obs_encoder_get_last_error(video_) << obs_output_get_last_error(replay_);
+        // A failed start can queue a stop event. It must not stop the next candidate.
+        ++replayGeneration_;
         return false;
+    }
     encoderName_ = QString::fromUtf8(obs_encoder_get_display_name(b.constData()));
     return true;
 }
@@ -77,6 +122,9 @@ void ObsEngine::saveReplay() {
         emit failure("Activez d'abord l'Instant Replay.");
         return;
     }
+    qInfo().noquote() << "Replay save requested:" << encoderName_
+                     << "frames" << obs_output_get_total_frames(replay_)
+                     << "directory" << settings_.clips;
     if (queuedSaves_ >= 8) {
         emit failure("Huit sauvegardes sont déjà en attente.");
         return;
@@ -101,8 +149,17 @@ void ObsEngine::requestSave() {
     watchdog_->start();
     emit state("Saving");
     calldata_t c{};
-    proc_handler_call(obs_output_get_proc_handler(replay_), "save", &c);
+    const bool requested = proc_handler_call(obs_output_get_proc_handler(replay_), "save", &c);
     calldata_free(&c);
+    if (!requested) {
+        saving_ = false;
+        queuedSaves_ = 0;
+        watchdog_->stop();
+        if (fallbackToSoftware())
+            return;
+        emit failure("La demande de sauvegarde du replay a échoué. Consultez le journal.");
+        emit state(recording_ ? "Recording" : "Buffering");
+    }
 }
 void ObsEngine::onSaved(void *p, calldata_t *) {
     auto generation = static_cast<ObsEngine *>(p)->replayGeneration_.load();
@@ -127,8 +184,11 @@ void ObsEngine::handleSaved() {
     if (!path.isEmpty() && QFileInfo(path).size() > 0) {
         emit metrics({{"saveMs", saveElapsed_.elapsed()}});
         emit saved(path);
-    } else
+    } else {
+        if (fallbackToSoftware())
+            return;
         emit failure("Le replay n'a pas produit de fichier lisible.");
+    }
     emit state(recording_ ? "Recording" : "Buffering");
     if (queuedSaves_)
         QTimer::singleShot(100, this, &ObsEngine::requestSave);
@@ -174,18 +234,32 @@ void ObsEngine::onReplayStop(void *p, calldata_t *c) {
         auto engine = static_cast<ObsEngine *>(p);
         if (engine->replayGeneration_.load() == generation)
             engine->handleStopped(true, code);
-    });
+    }, Qt::QueuedConnection);
 }
 void ObsEngine::onRecordStop(void *p, calldata_t *c) {
     int code = int(calldata_int(c, "code"));
+    auto generation = static_cast<ObsEngine *>(p)->replayGeneration_.load();
     QMetaObject::invokeMethod(static_cast<ObsEngine *>(p),
-                              [p, code] { static_cast<ObsEngine *>(p)->handleStopped(false, code); });
+                              [p, code, generation] {
+                                  auto engine = static_cast<ObsEngine *>(p);
+                                  if (engine->replayGeneration_.load() == generation)
+                                      engine->handleStopped(false, code);
+                              }, Qt::QueuedConnection);
 }
 void ObsEngine::handleStopped(bool replay, int code) {
     if (replay) {
         if (!stopping_) {
+            // Read diagnostics before releasing the output and its encoder.
+            QString detail = replay_ ? QString::fromUtf8(obs_output_get_last_error(replay_)) : QString();
+            if (detail.isEmpty() && video_)
+                detail = QString::fromUtf8(obs_encoder_get_last_error(video_));
+            qWarning().noquote() << "Replay stopped:" << code << encoderName_ << detail;
+            if (code == OBS_OUTPUT_ENCODE_ERROR && fallbackToSoftware())
+                return;
             releasePipeline();
-            error(QString("Le tampon s'est arrêté (code %1). Vérifiez l'encodeur et le disque.").arg(code));
+            error(detail.isEmpty()
+                      ? QString("Le tampon s'est arrêté (code %1). Vérifiez l'encodeur et le disque.").arg(code)
+                      : QString("Le tampon s'est arrêté (code %1) : %2").arg(code).arg(detail));
         }
         return;
     }

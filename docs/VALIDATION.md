@@ -1,5 +1,13 @@
 # Validation
 
+## Software fallback checks, 20 October 2026
+
+Release build and CTest passed. `FallbackTests` passed 4/4 with no skips on the Radeon RX 6600 host. An injected OBS encoder-stop signal replaced the running AMD encoder with x264, then a real window replay was saved and fully decoded by FFmpeg. An unavailable AV1 codec also fell back to software H.264 at startup. NVIDIA hardware and the 30-second save-timeout path have not been exercised on this host.
+
+Hardware failures and blocked saves now switch the current capture session to software H.264. The existing source and audio devices are retained; the replay buffer is rebuilt and any manual recording is interrupted. Previously buffered seconds cannot be recovered. The application reports the switch, and the configured hardware preference is retried on the next capture session. A software failure ends recovery rather than retrying indefinitely.
+
+The optional integration runner is `build/fallback_tests.exe`. Run it beside the packaged OBS helper executables (copy it temporarily to `dist/ClipForge`) with `CLIPFORGE_TEST_PACKAGE` set to that package's absolute directory. Its OBS stop signal is simulated; the encoders, replay buffer, captured window, file muxing and decoding are real.
+
 Tests executed on 18 October 2026, Windows 11 build 26300.9711 (26H2), Ryzen 7 8700F (8 cores / 16 logical processors), 32 GB RAM, Radeon RX 6600, driver 32.0.21045.5002. MSVC 19.51, Qt 6.8.3, OBS 32.2.2, FFmpeg CLI 7.1.1. These are desktop/window capture results, not game FPS impact measurements.
 
 | Executed run | Settings | Results |

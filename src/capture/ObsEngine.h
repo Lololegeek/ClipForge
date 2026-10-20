@@ -23,6 +23,7 @@ class ObsEngine : public QObject {
     void ready(QVariantList encoders, QVariantList sources, QVariantList microphones);
     void state(QString state);
     void failure(QString message);
+    void notice(QString message);
     void saved(QString path);
     void metrics(QVariantMap data);
     void method(QString method, QString encoder);
@@ -42,6 +43,7 @@ class ObsEngine : public QObject {
     obs_encoder_t *video_ = nullptr, *aac_ = nullptr;
     obs_output_t *replay_ = nullptr, *record_ = nullptr;
     bool createOutputs(const QString &);
+    bool fallbackToSoftware();
     void releasePipeline();
     void requestSave();
     void handleSaved();
