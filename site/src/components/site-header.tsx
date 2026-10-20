@@ -74,6 +74,13 @@ export function SiteHeader() {
           >
             Fonctionnalités
           </Link>
+          <Link
+            href="/changelog/"
+            className="text-muted hover:text-ink aria-[current=page]:text-ink rounded-md px-3 py-2 text-[0.9375rem] transition-colors"
+            aria-current={pathname.startsWith("/changelog") ? "page" : undefined}
+          >
+            Changelog
+          </Link>
         </nav>
 
         <div className="ml-auto flex items-center gap-2 md:ml-2">
@@ -127,6 +134,13 @@ export function SiteHeader() {
                   className="text-ink hover:bg-raised rounded-lg px-3 py-3 text-lg"
                 >
                   Fonctionnalités détaillées
+                </Link>
+                <Link
+                  href="/changelog/"
+                  onClick={() => setMenu(false)}
+                  className="text-ink hover:bg-raised rounded-lg px-3 py-3 text-lg"
+                >
+                  Changelog
                 </Link>
                 <Link
                   href="/licences/"

@@ -18,6 +18,9 @@ export function SiteFooter() {
           <Link className="hover:text-ink" href="/fonctionnalites/">
             Fonctionnalités
           </Link>
+          <Link className="hover:text-ink" href="/changelog/">
+            Changelog
+          </Link>
           <Link className="hover:text-ink" href="/telechargement/">
             Télécharger
           </Link>

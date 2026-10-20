@@ -4,6 +4,8 @@
 
 Release build and CTest passed. `FallbackTests` passed 4/4 with no skips on the Radeon RX 6600 host. An injected OBS encoder-stop signal replaced the running AMD encoder with x264, then a real window replay was saved and fully decoded by FFmpeg. An unavailable AV1 codec also fell back to software H.264 at startup. NVIDIA hardware and the 30-second save-timeout path have not been exercised on this host.
 
+A repeat run against the packaged OBS runtime later on 20 October passed 3 tests and skipped the hardware-failure case: OBS exposed no hardware H.264 encoder to that test process. The unavailable-codec fallback started a real x264 replay successfully.
+
 Hardware failures and blocked saves now switch the current capture session to software H.264. The existing source and audio devices are retained; the replay buffer is rebuilt and any manual recording is interrupted. Previously buffered seconds cannot be recovered. The application reports the switch, and the configured hardware preference is retried on the next capture session. A software failure ends recovery rather than retrying indefinitely.
 
 The optional integration runner is `build/fallback_tests.exe`. Run it beside the packaged OBS helper executables (copy it temporarily to `dist/ClipForge`) with `CLIPFORGE_TEST_PACKAGE` set to that package's absolute directory. Its OBS stop signal is simulated; the encoders, replay buffer, captured window, file muxing and decoding are real.

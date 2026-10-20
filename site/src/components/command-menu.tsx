@@ -85,11 +85,18 @@ export function CommandMenu() {
             className="[&_[cmdk-group-heading]]:text-muted [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:tracking-widest [&_[cmdk-group-heading]]:uppercase"
           >
             <Command.Item
-              value="page fonctionnalités périmètre version 0.3"
+              value="page fonctionnalités périmètre version 0.5"
               className={itemClass}
               onSelect={run(() => router.push("/fonctionnalites/"))}
             >
               <FileText /> Fonctionnalités et limites détaillées
+            </Command.Item>
+            <Command.Item
+              value="page changelog historique versions nouveautés mises à jour"
+              className={itemClass}
+              onSelect={run(() => router.push("/changelog/"))}
+            >
+              <FileText /> Historique des versions
             </Command.Item>
             <Command.Item
               value="page télécharger installation compiler"
