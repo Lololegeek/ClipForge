@@ -12,10 +12,10 @@ cd ClipForge
 # → dist/ClipForge/ClipForge.exe`;
 
 export const SECTIONS = [
-  { id: "parcours", label: "Parcours" },
-  { id: "appli", label: "L’application" },
-  { id: "technique", label: "Technique" },
-  { id: "limites", label: "Limites" },
-  { id: "faq", label: "Questions" },
-  { id: "telecharger", label: "Télécharger" },
+  { id: "parcours", label: "Parcours", href: "/parcours/" },
+  { id: "appli", label: "L’application", href: "/application/" },
+  { id: "technique", label: "Technique", href: "/technique/" },
+  { id: "limites", label: "Limites", href: "/limites/" },
+  { id: "faq", label: "Questions", href: "/faq/" },
+  { id: "telecharger", label: "Télécharger", href: "/telechargement/" },
 ] as const;

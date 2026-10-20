@@ -24,7 +24,7 @@ export function Hero() {
         </p>
         <div className="mt-9 flex flex-wrap gap-3">
           <Button asChild variant="primary" size="lg">
-            <Link href="/#telecharger">
+            <Link href="/telechargement/">
               <Windows /> Télécharger pour Windows
             </Link>
           </Button>

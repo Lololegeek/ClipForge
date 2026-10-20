@@ -5,36 +5,15 @@ import { Menu, X } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CommandMenu } from "@/components/command-menu";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { SECTIONS } from "@/lib/site";
 
-function useActiveSection(enabled: boolean) {
-  const [active, setActive] = useState<string | null>(null);
-  useEffect(() => {
-    if (!enabled) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) if (e.isIntersecting) setActive(e.target.id);
-      },
-      { rootMargin: "-45% 0px -50% 0px" },
-    );
-    for (const s of SECTIONS) {
-      const el = document.getElementById(s.id);
-      if (el) io.observe(el);
-    }
-    return () => io.disconnect();
-  }, [enabled]);
-  return enabled ? active : null;
-}
-
 export function SiteHeader() {
   const pathname = usePathname();
-  const home = pathname === "/";
-  const active = useActiveSection(home);
   const [menu, setMenu] = useState(false);
 
   return (
@@ -50,15 +29,17 @@ export function SiteHeader() {
         </Link>
 
         <nav aria-label="Principal" className="ml-auto hidden items-center gap-1 md:flex">
-          {SECTIONS.filter((s) => s.id !== "telecharger").map((s) => (
+          {SECTIONS.filter((s) => s.id !== "telecharger").map((s) => {
+            const active = pathname.startsWith(s.href.slice(0, -1));
+            return (
             <Link
               key={s.id}
-              href={`/#${s.id}`}
-              className="text-muted hover:text-ink aria-[current=true]:text-ink relative rounded-md px-3 py-2 text-[0.9375rem] transition-colors"
-              aria-current={active === s.id}
+              href={s.href}
+              className="text-muted hover:text-ink aria-[current=page]:text-ink relative rounded-md px-3 py-2 text-[0.9375rem] transition-colors"
+              aria-current={active ? "page" : undefined}
             >
               {s.label}
-              {active === s.id && (
+              {active && (
                 <motion.span
                   layoutId="nav-underline"
                   className="bg-accent absolute inset-x-3 -bottom-px h-0.5 rounded-full"
@@ -66,7 +47,8 @@ export function SiteHeader() {
                 />
               )}
             </Link>
-          ))}
+            );
+          })}
           <Link
             href="/fonctionnalites/"
             className="text-muted hover:text-ink aria-[current=page]:text-ink rounded-md px-3 py-2 text-[0.9375rem] transition-colors"
@@ -87,7 +69,7 @@ export function SiteHeader() {
           <CommandMenu />
           <ThemeToggle />
           <Button asChild variant="primary" size="sm" className="hidden sm:inline-flex">
-            <Link href="/#telecharger">Télécharger</Link>
+            <Link href="/telechargement/">Télécharger</Link>
           </Button>
 
           <Dialog.Root open={menu} onOpenChange={setMenu}>
@@ -121,7 +103,7 @@ export function SiteHeader() {
                 {SECTIONS.map((s) => (
                   <Link
                     key={s.id}
-                    href={`/#${s.id}`}
+                    href={s.href}
                     onClick={() => setMenu(false)}
                     className="text-ink hover:bg-raised rounded-lg px-3 py-3 text-lg"
                   >

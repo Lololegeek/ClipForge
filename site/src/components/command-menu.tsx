@@ -66,15 +66,15 @@ export function CommandMenu() {
             Aucun résultat.
           </Command.Empty>
           <Command.Group
-            heading="Sur cette page"
+            heading="Rubriques"
             className="[&_[cmdk-group-heading]]:text-muted [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:tracking-widest [&_[cmdk-group-heading]]:uppercase"
           >
             {SECTIONS.map((s) => (
               <Command.Item
                 key={s.id}
-                value={`section ${s.label}`}
+                value={`page ${s.label}`}
                 className={itemClass}
-                onSelect={run(() => router.push(`/#${s.id}`))}
+                onSelect={run(() => router.push(s.href))}
               >
                 <FileText /> {s.label}
               </Command.Item>
