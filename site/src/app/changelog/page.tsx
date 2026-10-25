@@ -10,6 +10,18 @@ export const metadata: Metadata = {
 
 const releases = [
   {
+    version: "0.7.0",
+    date: "25 octobre 2026",
+    summary: "Les réglages se modifient pendant le replay, la capture de jeu est plus fiable et le micro est plus simple à activer.",
+    changes: [
+      "Plus besoin d’arrêter la capture : « Appliquer » enregistre les réglages et redémarre le replay automatiquement avec les nouvelles valeurs. Les options de l’application (barre des tâches, mises à jour, touche de sauvegarde…) s’appliquent sans interruption.",
+      "Capture de jeu : si le hook ne répond pas au bout de quelques secondes, ClipForge bascule sur la capture de la fenêtre du jeu (Windows Graphics Capture) au lieu de laisser un replay noir.",
+      "Nouvelle option « Micro par défaut de Windows » dans les réglages audio, en plus de la liste des micros.",
+      "Si le micro choisi est indisponible, le replay démarre quand même, sans micro, et vous prévient.",
+    ],
+    url: "https://github.com/Lololegeek/ClipForge/releases/tag/v0.7.0",
+  },
+  {
     version: "0.6.0",
     date: "25 octobre 2026",
     summary: "Le replay est actif dès le lancement, et clips, éditeur et miniatures s’affichent plus vite.",

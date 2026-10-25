@@ -8,7 +8,7 @@ ColumnLayout {
     id: settings
     spacing: 16
     property var draft: Object.assign({}, appController.config)
-    property bool stopped: appController.state === "Idle" || appController.state === "Error"
+    property bool stopped: appController.state === "Idle" || appController.state === "Error" || appController.state === "Buffering" || appController.state === "Recording"
     property string chosenTarget: settings.draft.target || ""
     function rowsForMode() {
         var kind = ["display", "window", "game"][mode.currentIndex]
@@ -96,7 +96,7 @@ ColumnLayout {
     }
     Text {
         visible: !settings.stopped
-        text: "Arrête la capture pour modifier ses réglages."
+        text: "Patiente : la capture est occupée (démarrage ou sauvegarde)."
         color: Theme.accent
     }
     ScrollView {
@@ -347,8 +347,12 @@ ColumnLayout {
                         {
                             name: "Désactivé",
                             value: "disabled"
+                        },
+                        {
+                            name: "Micro par défaut de Windows",
+                            value: "default"
                         }
-                    ].concat(appController.microphones)
+                    ].concat(appController.microphones.filter(function (m) { return m.value !== "default" }))
                     Component.onCompleted: {
                         for (var i = 0; i < model.length; i++)
                             if (model[i].value === settings.draft.microphone)

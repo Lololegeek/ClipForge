@@ -64,6 +64,10 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
         else if (s == "Error")
             scheduleReplayRetry();
         emit changed();
+        if (restartPending_ && (s == "Idle" || s == "Error")) {
+            restartPending_ = false;
+            QTimer::singleShot(150, this, &Controller::start);
+        }
     });
     connect(engine_, &ObsEngine::method, this, [this](QString m, QString e) {
         method_ = m;

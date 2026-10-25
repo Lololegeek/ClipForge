@@ -1,3 +1,4 @@
+#include "platform/WindowCatalog.h"
 #include "capture/ObsEngine.h"
 #include <QDateTime>
 #include <QDir>
@@ -122,6 +123,22 @@ void ObsEngine::stats() {
     // A missing game/window never silently broadens capture to the desktop.
     if (source_ && obs_source_get_width(source_))
         sourceWarned_ = false;
+    if (replay_ && elapsed_.elapsed() > 8000 && !gameFallback_ && source_ && !obs_source_get_width(source_) &&
+        settings_.mode == "game" && !settings_.target.isEmpty()) {
+        // Only once the game window really exists; before that, the hook may simply be waiting for the launch.
+        bool running = false;
+        const QString exe = settings_.target.section(':', 2);
+        for (const auto &w : windows())
+            if (w.toMap().value("selector").toString().section(':', 2) == exe) {
+                running = true;
+                break;
+            }
+        gameFallback_ = running;
+        if (running && fallbackGameToWindow()) {
+            emit notice("Le hook de jeu n'a pas répondu : capture de la fenêtre du jeu à la place.");
+            return;
+        }
+    }
     if (replay_ && elapsed_.elapsed() > 10000 && source_ && !obs_source_get_width(source_) &&
         !sourceWarned_) {
         sourceWarned_ = true;

@@ -26,6 +26,7 @@ void ObsEngine::start(Settings s) {
     }
     settings_ = s;
     sourceWarned_ = false;
+    gameFallback_ = false;
     emit state("Initializing");
     if (!QDir().mkpath(s.clips) || QStorageInfo(s.clips).bytesAvailable() < 256LL * 1024 * 1024) {
         error("Dossier inaccessible ou moins de 256 Mo disponibles.");
@@ -135,12 +136,12 @@ void ObsEngine::start(Settings s) {
         mic_ = obs_source_create("wasapi_input_capture", "ClipForge microphone", a, nullptr);
         obs_data_release(a);
         if (!mic_) {
-            releasePipeline();
-            error("Microphone indisponible.");
-            return;
+            // A missing microphone must not stop the replay: keep capturing without it.
+            emit notice("Microphone indisponible : le replay continue sans micro.");
+        } else {
+            obs_source_set_volume(mic_, float(s.micVolume));
+            obs_set_output_source(2, mic_);
         }
-        obs_source_set_volume(mic_, float(s.micVolume));
-        obs_set_output_source(2, mic_);
     }
     QStringList candidates;
     if (s.encoder != "auto")
@@ -176,5 +177,33 @@ void ObsEngine::start(Settings s) {
     emit state("Buffering");
     if (video_ && QString::fromUtf8(obs_encoder_get_id(video_)) == "obs_x264" && s.encoder != "obs_x264")
         emit notice("Encodeur matériel indisponible : capture en H.264 logiciel (CPU).");
+}
+// The OBS game hook cannot attach to every title (launchers, anti-cheat, borderless quirks). When the chosen game
+// still sends no image, capture the same window with Windows Graphics Capture instead of leaving a black replay.
+bool ObsEngine::fallbackGameToWindow() {
+    if (!scene_ || !source_ || settings_.mode != "game" || settings_.target.isEmpty())
+        return false;
+    auto data = obs_data_create();
+    obs_data_set_string(data, "window", settings_.target.toUtf8().constData());
+    obs_data_set_bool(data, "capture_cursor", true);
+    obs_data_set_int(data, "priority", 1);
+    obs_data_set_int(data, "method", 2);
+    const char *latest = obs_get_latest_input_type_id("window_capture");
+    auto replacement = obs_source_create(latest ? latest : "window_capture", "ClipForge video", data, nullptr);
+    obs_data_release(data);
+    if (!replacement)
+        return false;
+    if (auto old = obs_scene_find_source(scene_, obs_source_get_name(source_)))
+        obs_sceneitem_remove(old);
+    auto item = obs_scene_add(scene_, replacement);
+    vec2 bounds{float(settings_.width), float(settings_.height)};
+    obs_sceneitem_set_bounds_type(item, OBS_BOUNDS_SCALE_INNER);
+    obs_sceneitem_set_bounds(item, &bounds);
+    obs_sceneitem_set_bounds_alignment(item, OBS_ALIGN_CENTER);
+    obs_source_release(source_);
+    source_ = replacement;
+    captureMethod_ = "Jeu · repli Windows Graphics Capture";
+    emit method(captureMethod_, encoderName_);
+    return true;
 }
 } // namespace cf

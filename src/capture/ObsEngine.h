@@ -32,7 +32,7 @@ class ObsEngine : public QObject {
   private:
     QString runtime_, config_, recordPath_, encoderName_, captureMethod_;
     Settings settings_;
-    bool initialized_ = false, recording_ = false, stopping_ = false, saving_ = false, sourceWarned_ = false;
+    bool initialized_ = false, recording_ = false, stopping_ = false, saving_ = false, sourceWarned_ = false, gameFallback_ = false;
     int queuedSaves_ = 0;
     std::atomic<quint64> replayGeneration_{0};
     QElapsedTimer elapsed_, saveElapsed_;
@@ -45,6 +45,7 @@ class ObsEngine : public QObject {
     bool createOutputs(const QString &);
     bool fallbackToSoftware();
     void releasePipeline();
+    bool fallbackGameToWindow();
     void requestSave();
     void handleSaved();
     void handleStopped(bool replay, int code);

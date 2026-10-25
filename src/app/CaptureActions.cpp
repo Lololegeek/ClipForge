@@ -51,8 +51,9 @@ void Controller::toggleRecording() {
     QMetaObject::invokeMethod(engine_, &ObsEngine::toggleRecording);
 }
 bool Controller::apply(QVariantMap v) {
-    if (state_ != "Idle" && state_ != "Error") {
-        notify("Arrêtez la capture avant d'appliquer les réglages.", true);
+    const bool running = state_ == "Buffering" || state_ == "Recording";
+    if (!running && state_ != "Idle" && state_ != "Error") {
+        notify("Patientez un instant : la capture est occupée (démarrage ou sauvegarde).", true);
         return false;
     }
     auto s = Settings::fromJson(QJsonObject::fromVariantMap(v));
@@ -61,6 +62,15 @@ bool Controller::apply(QVariantMap v) {
         notify(e, true);
         return false;
     }
+    // Options that only affect the app never need the capture pipeline to be rebuilt.
+    auto captureKey = [](const Settings &x) {
+        auto o = x.json();
+        for (const char *k : {"closeToTray", "autoCapture", "startMinimized", "gameOverlay", "autoUpdate", "alwaysReplay",
+                              "saveKey", "profiles"})
+            o.remove(k);
+        return o;
+    };
+    const bool restart = running && captureKey(s) != captureKey(settings_);
     settings_ = s;
     emit configChanged();
     e = hotkeys_.configure(s.saveKey);
@@ -69,8 +79,15 @@ bool Controller::apply(QVariantMap v) {
     else
         notify("Réglages enregistrés.");
     emit changed();
-    // Applying settings needs the capture stopped; bring the replay straight back with the new values.
-    if (settings_.alwaysReplay && !test_ && !uiOnly_)
+    if (restart) {
+        // Rebuild the replay live: stop it, and the Idle transition below starts it again with the new values.
+        restartPending_ = true;
+        notify("Réglages enregistrés : redémarrage du replay…");
+        stop();
+        return true;
+    }
+    // Idle/Error: bring the replay straight back with the new values.
+    if (!running && settings_.alwaysReplay && !test_ && !uiOnly_)
         QTimer::singleShot(150, this, &Controller::start);
     return true;
 }

@@ -178,7 +178,7 @@ class Controller : public QObject {
     QString lastNotice_;
     bool gate(QElapsedTimer &t, int ms);
     void toast(const QString &title, const QString &subtitle, int kind);
-    bool ready_ = false, recording_ = false, test_ = false, quitting_ = false, autoStarted_ = false, uiOnly_ = false;
+    bool ready_ = false, recording_ = false, test_ = false, quitting_ = false, autoStarted_ = false, uiOnly_ = false, restartPending_ = false;
     int replayRetries_ = 0;
     QVariantMap metrics_, selected_;
     QVariantList encoders_, targets_, microphones_, games_;
