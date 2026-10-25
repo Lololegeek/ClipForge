@@ -54,9 +54,15 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
         emit configChanged();
         if (test_)
             runSelfTest();
+        else if (settings_.alwaysReplay && !uiOnly_)
+            start();
     });
     connect(engine_, &ObsEngine::state, this, [this](QString s) {
         state_ = s;
+        if (s == "Buffering" || s == "Recording")
+            replayRetries_ = 0;
+        else if (s == "Error")
+            scheduleReplayRetry();
         emit changed();
     });
     connect(engine_, &ObsEngine::method, this, [this](QString m, QString e) {
@@ -73,6 +79,11 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
             metrics_[it.key()] = it.value();
         QStorageInfo disk(settings_.clips);
         metrics_["diskGB"] = std::max(0.0, double(disk.bytesAvailable()) / 1073741824.0);
+        if (!test_ && disk.isValid() && metrics_["diskGB"].toDouble() < 2.0 && (!diskGate_.isValid() || diskGate_.elapsed() > 600000)) {
+            diskGate_.restart();
+            notify("Espace disque faible (moins de 2 Go) : les prochains clips risquent d'échouer.", true);
+            toast("Disque presque plein", "Libérez de l'espace pour continuer à clipper.", Overlay::Error);
+        }
         if (test_)
             testSamples_.append(QJsonObject::fromVariantMap(metrics_));
         emit changed();
@@ -89,7 +100,7 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
     connect(&library_, &ClipModel::failure, this, [this](QString s) { notify(s, true); });
     connect(engine_, &ObsEngine::saved, this, [this](QString p) {
         lastClip_ = p;
-        jobs_.import(p, game_);
+        jobs_.import(p, game_, true);
         notify("Clip sauvegardé : " + QFileInfo(p).fileName());
         toast("Clip sauvegardé", QFileInfo(p).fileName(), Overlay::Success);
     });
@@ -105,8 +116,9 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
         jobs_.import(p, game_);
         notify("Export terminé : " + QFileInfo(p).fileName());
     });
-    if (!test_ && !QCoreApplication::arguments().contains("--ui-test") && !QCoreApplication::arguments().contains("--editor-test") &&
-        !QCoreApplication::arguments().contains("--screenshot")) {
+    const auto cli = QCoreApplication::arguments();
+    uiOnly_ = cli.contains("--ui-test") || cli.contains("--editor-test") || cli.contains("--screenshot");
+    if (!test_ && !uiOnly_) {
         connectTray();
         overlay_ = new Overlay;
         connect(&hotkeys_, &GlobalHotkeys::save, this, &Controller::saveReplay);
@@ -162,6 +174,16 @@ void Controller::connectTray() {
     });
     connect(tray_, &QObject::destroyed, menu, &QObject::deleteLater);
     tray_->show();
+}
+void Controller::scheduleReplayRetry() {
+    // The replay must come back by itself after a transient failure (GPU reset, busy encoder), a few times at most.
+    if (!settings_.alwaysReplay || test_ || uiOnly_ || quitting_ || replayRetries_ >= 3)
+        return;
+    int delay = 4000 * ++replayRetries_;
+    QTimer::singleShot(delay, this, [this] {
+        if (state_ == "Error" && !quitting_)
+            start();
+    });
 }
 bool Controller::gate(QElapsedTimer &t, int ms) {
     if (t.isValid() && t.elapsed() < ms)

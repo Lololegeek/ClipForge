@@ -40,7 +40,8 @@ class PlaybackAudio : public QObject {
     QProcess *decoder_ = nullptr;
     QIODevice *device_ = nullptr;
     QTimer drain_;
-    QTimer rateRestart_;
+    QTimer rateRestart_, seekRestart_;
+    qint64 seekTarget_ = 0;
     QByteArray pending_;
     double volume_ = 1;
     int channels_ = 2;

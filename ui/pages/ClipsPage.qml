@@ -109,6 +109,8 @@ ColumnLayout {
         cellWidth: page.listMode ? width : width / Math.max(1, Math.floor(width / 290))
         cellHeight: page.listMode ? 78 : cellWidth * 0.5625 + 70
         ScrollBar.vertical: ScrollBar {}
+        reuseItems: true
+        cacheBuffer: 600
         delegate: Item {
             required property int index
             required property int clipId
@@ -145,6 +147,8 @@ ColumnLayout {
                 width: page.listMode ? 88 : parent.width
                 height: width * 0.5625
                 sourceSize.width: 480
+                sourceSize.height: 270
+                cache: true
                 source: thumbnail
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true

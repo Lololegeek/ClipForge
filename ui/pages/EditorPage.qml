@@ -16,6 +16,7 @@ ColumnLayout {
     property real outPoint: Number(appController.selected.duration || 0)
     // Set while "Lire le passage" plays the selected range; playback pauses at the out point.
     property bool previewing: false
+    property real volumeBeforeMute: 1
     readonly property real outputSeconds: {
         var total = 0;
         for (var i = 0; i < appController.segments.length; ++i) {
@@ -107,6 +108,34 @@ ColumnLayout {
         onActivated: editor.seekTo(editor.outPoint)
     }
     Shortcut {
+        sequence: ","
+        enabled: editor.hasClip
+        onActivated: {
+            player.pause();
+            editor.seekTo(player.position / 1000 - 1 / 30);
+        }
+    }
+    Shortcut {
+        sequence: "."
+        enabled: editor.hasClip
+        onActivated: {
+            player.pause();
+            editor.seekTo(player.position / 1000 + 1 / 30);
+        }
+    }
+    Shortcut {
+        sequence: "M"
+        enabled: editor.hasClip
+        onActivated: {
+            if (volumeControl.value > 0) {
+                editor.volumeBeforeMute = volumeControl.value;
+                volumeControl.value = 0;
+            } else {
+                volumeControl.value = editor.volumeBeforeMute;
+            }
+        }
+    }
+    Shortcut {
         sequences: [StandardKey.Undo]
         enabled: appController.canUndo
         onActivated: appController.undo()
@@ -149,7 +178,7 @@ ColumnLayout {
         }
         Text {
             visible: editor.hasClip
-            text: "Espace lire · I / O entrée / sortie · P aperçu · ← → 1 s (Maj 5 s)"
+            text: "Espace lire · I / O entrée / sortie · P aperçu · ← → 1 s (Maj 5 s) · , . image · M muet"
             color: Theme.secondary
             opacity: 0.8
             font.pixelSize: 11
@@ -169,6 +198,15 @@ ColumnLayout {
         Layout.minimumHeight: 150
         color: "#07080d"
         radius: 8
+        // The library thumbnail shows instantly while the decoder opens the file.
+        Image {
+            anchors.fill: parent
+            visible: editor.hasClip && player.playbackState === MediaPlayer.StoppedState && player.position === 0
+            source: appController.selected.thumbnail ? window.fileUrl(appController.selected.thumbnail) : ""
+            fillMode: Image.PreserveAspectFit
+            asynchronous: true
+            cache: true
+        }
         VideoOutput {
             id: output
             anchors.fill: parent

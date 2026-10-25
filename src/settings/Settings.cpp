@@ -38,6 +38,7 @@ QJsonObject Settings::json() const {
     STR(startMinimized);
     STR(gameOverlay);
     STR(autoUpdate);
+    STR(alwaysReplay);
     STR(profiles);
 #undef STR
     return o;
@@ -73,6 +74,7 @@ Settings Settings::fromJson(const QJsonObject &o) {
     B(startMinimized);
     B(gameOverlay);
     B(autoUpdate);
+    B(alwaysReplay);
     if (o.contains("profiles"))
         s.profiles = o["profiles"].toObject();
     if (o.contains("systemVolume"))

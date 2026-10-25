@@ -8,6 +8,9 @@
 #include <cstring>
 namespace cf {
 PlaybackAudio::PlaybackAudio(QObject *parent) : QObject(parent) {
+    seekRestart_.setSingleShot(true);
+    seekRestart_.setInterval(60);
+    connect(&seekRestart_, &QTimer::timeout, this, [this] { start(seekTarget_); });
     drain_.setInterval(5);
     connect(&drain_, &QTimer::timeout, this, &PlaybackAudio::flush);
     rateRestart_.setSingleShot(true);
@@ -63,6 +66,7 @@ void PlaybackAudio::fail(QString s) {
 void PlaybackAudio::reset() {
     drain_.stop();
     rateRestart_.stop();
+    seekRestart_.stop();
     stopDecoder();
     if (sink_) {
         sink_->stop();
@@ -85,10 +89,13 @@ void PlaybackAudio::stopDecoder() {
     }
 }
 void PlaybackAudio::seek(qint64 position) {
-    reset();
+    // Dragging the seek bar fires this per pixel: move the video at once, but only start one audio decoder
+    // once the cursor settles, and keep the audio sink alive instead of rebuilding it every time.
+    stopDecoder();
     if (player_) {
         player_->setPosition(position);
-        start(position);
+        seekTarget_ = position;
+        seekRestart_.start();
     }
 }
 void PlaybackAudio::start(qint64 position) {
@@ -171,6 +178,10 @@ void PlaybackAudio::start(qint64 position) {
                    {"-v",
                     "error",
                     "-nostdin",
+                    "-probesize",
+                    "131072",
+                    "-analyzeduration",
+                    "0",
                     "-readrate",
                     QString::number(rate),
                     "-ss",

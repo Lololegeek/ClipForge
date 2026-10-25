@@ -67,6 +67,7 @@ ColumnLayout {
         draft.autoCapture = automatic.checked;
         draft.startMinimized = minimized.checked;
         draft.autoUpdate = autoUpdate.checked;
+        draft.alwaysReplay = alwaysReplay.checked;
         draft.gameOverlay = gameOverlay.checked;
         draft.saveKey = saveKey.model[saveKey.currentIndex].value;
         appController.apply(draft);
@@ -416,6 +417,11 @@ ColumnLayout {
                 color: Theme.text
                 font.pixelSize: 19
                 font.weight: Font.DemiBold
+            }
+            CheckBox {
+                id: alwaysReplay
+                text: "Instant Replay toujours actif dès le lancement de ClipForge"
+                checked: settings.draft.alwaysReplay
             }
             CheckBox {
                 id: closeTray

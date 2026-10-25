@@ -10,6 +10,20 @@ export const metadata: Metadata = {
 
 const releases = [
   {
+    version: "0.6.0",
+    date: "25 octobre 2026",
+    summary: "Le replay est actif dès le lancement, et clips, éditeur et miniatures s’affichent plus vite.",
+    changes: [
+      "Instant Replay démarre automatiquement dès l’ouverture de ClipForge, redémarre après un changement de réglages et retente en cas d’erreur. Une option permet de le désactiver.",
+      "Les miniatures sont générées en parallèle, avec priorité aux clips que vous venez de sauvegarder.",
+      "La grille de clips réutilise ses éléments et met les miniatures en cache pour défiler plus fluidement.",
+      "L’éditeur affiche la miniature instantanément avant la vidéo; le déplacement sur la barre de lecture est lissé côté audio.",
+      "Nouveaux raccourcis de l’éditeur : image par image avec , et . et coupure du son avec M.",
+      "Un avertissement apparaît quand l’espace disque passe sous 2 Go.",
+    ],
+    url: "https://github.com/Lololegeek/ClipForge/releases/tag/v0.6.0",
+  },
+  {
     version: "0.5.0",
     date: "20 octobre 2026",
     summary: "Une bibliothèque plus rapide, un montage plus pratique et une capture plus résiliente.",

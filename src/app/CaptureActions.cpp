@@ -69,6 +69,9 @@ bool Controller::apply(QVariantMap v) {
     else
         notify("Réglages enregistrés.");
     emit changed();
+    // Applying settings needs the capture stopped; bring the replay straight back with the new values.
+    if (settings_.alwaysReplay && !test_ && !uiOnly_)
+        QTimer::singleShot(150, this, &Controller::start);
     return true;
 }
 bool Controller::allowClose() const {
