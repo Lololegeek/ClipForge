@@ -174,11 +174,12 @@ class Controller : public QObject {
     QTimer detection_, updateTimer_;
     int quitAttempts_ = 0;
     Overlay *overlay_ = nullptr;
-    QElapsedTimer saveGate_, recordGate_, notifyGate_;
+    QElapsedTimer saveGate_, recordGate_, notifyGate_, diskGate_;
     QString lastNotice_;
     bool gate(QElapsedTimer &t, int ms);
     void toast(const QString &title, const QString &subtitle, int kind);
-    bool ready_ = false, recording_ = false, test_ = false, quitting_ = false, autoStarted_ = false;
+    bool ready_ = false, recording_ = false, test_ = false, quitting_ = false, autoStarted_ = false, uiOnly_ = false;
+    int replayRetries_ = 0;
     QVariantMap metrics_, selected_;
     QVariantList encoders_, targets_, microphones_, games_;
     EditProject project_;
@@ -189,5 +190,6 @@ class Controller : public QObject {
     void detect();
     void scan();
     void connectTray();
+    void scheduleReplayRetry();
 };
 } // namespace cf

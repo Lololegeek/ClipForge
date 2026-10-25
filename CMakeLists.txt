@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(ClipForge VERSION 0.5.0 LANGUAGES CXX)
+project(ClipForge VERSION 0.6.0 LANGUAGES CXX)
 if(CMAKE_CXX_CL_SHOWINCLUDES_PREFIX MATCHES "inclusion du fichier")
   # Some French-only MSVC kits emit UTF-8 but CMake probes the prefix as OEM text.
   set(CMAKE_CL_SHOWINCLUDES_PREFIX "Remarque : inclusion du fichier :  ")

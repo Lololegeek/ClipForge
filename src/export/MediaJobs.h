@@ -10,7 +10,7 @@ class MediaJobs : public QObject {
   public:
     MediaJobs(QString tools, QString cache, QObject *p = nullptr);
     ~MediaJobs();
-    void import(QString path, QString game = {});
+    void import(QString path, QString game = {}, bool priority = false);
     bool exportVideo(EditProject p, QString destination, int height, int fps, QString codec);
     bool busy() const {
         return exporter_ != nullptr;
@@ -35,9 +35,12 @@ class MediaJobs : public QObject {
     QString tools_, cache_;
     QQueue<Import> queue_;
     QSet<QString> pending_;
-    QProcess *probe_ = nullptr, *exporter_ = nullptr;
+    static constexpr int kParallelJobs = 3;
+    int active_ = 0;
+    QProcess *exporter_ = nullptr;
     QString exportTemp_;
     void next();
+    void run(Import job);
     QString tool(QString name) const;
 };
 } // namespace cf

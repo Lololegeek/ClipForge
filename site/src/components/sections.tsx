@@ -202,7 +202,7 @@ export function LimitsSection() {
         encore là.
       </SectionTitle>
       <p className="text-muted mt-6 max-w-xl text-lg">
-        ClipForge en est à la version 0.5. Voilà, sans arrondir, ce qui est vérifié et ce qui ne
+        ClipForge en est à la version 0.6. Voilà, sans arrondir, ce qui est vérifié et ce qui ne
         l’est pas.
       </p>
       <div className="mt-14 grid gap-12 lg:grid-cols-[5fr_7fr] lg:gap-20">

@@ -28,7 +28,7 @@ QString MediaJobs::tool(QString n) const {
     auto p = tools_ + "/" + n + ".exe";
     return QFileInfo::exists(p) ? p : QStandardPaths::findExecutable(n);
 }
-void MediaJobs::import(QString p, QString game) {
+void MediaJobs::import(QString p, QString game, bool priority) {
     p = QFileInfo(p).absoluteFilePath();
     if (pending_.contains(p))
         return;
@@ -37,15 +37,22 @@ void MediaJobs::import(QString p, QString game) {
         return;
     }
     pending_.insert(p);
-    queue_.enqueue({p, game});
+    // A clip the user just saved jumps ahead of a library scan so its thumbnail shows up immediately.
+    if (priority)
+        queue_.prepend({p, game});
+    else
+        queue_.enqueue({p, game});
     next();
 }
 void MediaJobs::next() {
-    if (probe_ || queue_.isEmpty())
-        return;
-    auto job = queue_.dequeue();
+    // Probing and thumbnailing are light, single-threaded processes: a few in parallel keep the library
+    // filling quickly without competing with a game for the CPU.
+    while (active_ < kParallelJobs && !queue_.isEmpty())
+        run(queue_.dequeue());
+}
+void MediaJobs::run(Import job) {
     auto p = new QProcess(this);
-    probe_ = p;
+    ++active_;
     p->setProgram(tool("ffprobe"));
     p->setArguments({"-v", "error", "-show_format", "-show_streams", "-of", "json", job.path});
     auto timeout = new QTimer(p);
@@ -57,7 +64,7 @@ void MediaJobs::next() {
         if (e == QProcess::FailedToStart) {
             emit failure("FFprobe introuvable. Vérifiez la distribution.");
             pending_.remove(job.path);
-            probe_ = nullptr;
+            --active_;
             p->deleteLater();
             next();
         }
@@ -73,7 +80,7 @@ void MediaJobs::next() {
                 if (code || status != QProcess::NormalExit || !video) {
                     emit failure("Vidéo invalide ou inaccessible : " + QFileInfo(job.path).fileName());
                     pending_.remove(job.path);
-                    probe_ = nullptr;
+                    --active_;
                     p->deleteLater();
                     next();
                     return;
@@ -97,16 +104,15 @@ void MediaJobs::next() {
                     // Same path, size and modification time: the cached thumbnail is still valid.
                     emit thumbnail(job.path, image);
                     pending_.remove(job.path);
-                    probe_ = nullptr;
+                    --active_;
                     next();
                     return;
                 }
                 auto thumb = new QProcess(this);
-                probe_ = thumb;
                 connect(thumb, &QProcess::errorOccurred, this, [this, thumb, job](QProcess::ProcessError e) {
                     if (e == QProcess::FailedToStart) {
                         pending_.remove(job.path);
-                        probe_ = nullptr;
+                        --active_;
                         thumb->deleteLater();
                         next();
                     }
@@ -116,7 +122,7 @@ void MediaJobs::next() {
                             if (c == 0 && QFileInfo::exists(image))
                                 emit thumbnail(job.path, image);
                             pending_.remove(job.path);
-                            probe_ = nullptr;
+                            --active_;
                             thumb->deleteLater();
                             next();
                         });
@@ -127,7 +133,7 @@ void MediaJobs::next() {
                 thumb->start(tool("ffmpeg"),
                              {"-v", "error", "-nostdin", "-y", "-ss",
                               QString::number(std::min(1.0, duration / 2)), "-i", job.path, "-frames:v", "1",
-                              "-vf", "scale=480:-2", "-threads", "1", image});
+                              "-an", "-sn", "-vf", "scale=480:-2:flags=fast_bilinear", "-q:v", "4", "-threads", "1", image});
             });
     p->start();
 }
