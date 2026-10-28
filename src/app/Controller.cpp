@@ -18,6 +18,7 @@
 #include <QSystemTrayIcon>
 #include <QTimer>
 #include <QUrl>
+#include <windows.h>
 namespace cf {
 Controller::Controller(QString runtime, QString data, QString tools, bool test)
     : data_(data), settings_(Settings::load(data + "/settings.json")), library_(data + "/library.sqlite"),
@@ -61,6 +62,9 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
         state_ = s;
         if (s == "Buffering" || s == "Recording")
             replayRetries_ = 0;
+        if (s == "Buffering")
+            // A fresh pipeline starts unmuted: push-to-talk keeps the microphone closed until the key is held.
+            setMicMuted(settings_.pushToTalk || (micMuted_ && settings_.micKey));
         else if (s == "Error")
             scheduleReplayRetry();
         emit changed();
@@ -102,13 +106,25 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
     });
     connect(&jobs_, &MediaJobs::failure, this, [this](QString s) { notify(s, true); });
     connect(&library_, &ClipModel::failure, this, [this](QString s) { notify(s, true); });
-    connect(engine_, &ObsEngine::saved, this, [this](QString p) {
+    connect(engine_, &ObsEngine::saved, this, &Controller::clipSaved);
+    connect(&jobs_, &MediaJobs::trimmed, this, [this](QString p) {
         lastClip_ = p;
         jobs_.import(p, game_, true);
-        notify("Clip sauvegardé : " + QFileInfo(p).fileName());
-        toast("Clip sauvegardé", QFileInfo(p).fileName(), Overlay::Success);
+        emit changed();
     });
-    connect(&jobs_, &MediaJobs::imported, &library_, &ClipModel::upsert);
+    connect(&jobs_, &MediaJobs::imported, this, &Controller::clipImported);
+    connect(&jobs_, &MediaJobs::snapshotReady, this, [this](QString p) {
+        QApplication::clipboard()->setImage(QImage(p));
+        notify("Image enregistrée et copiée : " + QFileInfo(p).fileName());
+    });
+    pttTimer_.setInterval(40);
+    connect(&pttTimer_, &QTimer::timeout, this, [this] {
+        // RegisterHotKey only reports the press; the release is polled while the key is held.
+        if (!(GetAsyncKeyState(settings_.micKey) & 0x8000)) {
+            pttTimer_.stop();
+            setMicMuted(true);
+        }
+    });
     connect(&jobs_, &MediaJobs::thumbnail, &library_, &ClipModel::setThumbnail);
     connect(&jobs_, &MediaJobs::exportProgress, this, [this](double p) {
         progress_ = p;
@@ -117,7 +133,8 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
     connect(&jobs_, &MediaJobs::exportBusy, this, [this](bool) { emit changed(); });
     connect(&jobs_, &MediaJobs::exported, this, [this](QString p) {
         lastExport_ = p;
-        jobs_.import(p, game_);
+        if (p.endsWith(".mp4", Qt::CaseInsensitive))
+            jobs_.import(p, game_);
         notify("Export terminé : " + QFileInfo(p).fileName());
     });
     const auto cli = QCoreApplication::arguments();
@@ -126,9 +143,11 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
         connectTray();
         overlay_ = new Overlay;
         connect(&hotkeys_, &GlobalHotkeys::save, this, &Controller::saveReplay);
-        auto error = hotkeys_.configure(settings_.saveKey);
-        if (!error.isEmpty())
-            notify(error, true);
+        connect(&hotkeys_, &GlobalHotkeys::saveFull, this, &Controller::saveFull);
+        connect(&hotkeys_, &GlobalHotkeys::marker, this, &Controller::addMarker);
+        connect(&hotkeys_, &GlobalHotkeys::mic, this, &Controller::micKey);
+        configureHotkeys();
+        QTimer::singleShot(30000, this, [this] { cleanupLibrary(); });
         if (autostart())
             setAutostart(true);
         connect(&updater_, &Updater::changed, this, &Controller::changed);
@@ -167,6 +186,7 @@ void Controller::connectTray() {
     auto menu = new QMenu;
     menu->addAction("Ouvrir ClipForge", this, &Controller::showWindow);
     menu->addAction("Sauvegarder le replay", this, &Controller::saveReplay);
+    menu->addAction("Sauvegarder tout le tampon", this, &Controller::saveFull);
     menu->addAction("Activer la capture", this, &Controller::start);
     menu->addAction("Arrêter la capture", this, &Controller::stop);
     menu->addSeparator();

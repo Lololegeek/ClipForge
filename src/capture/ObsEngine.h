@@ -17,6 +17,7 @@ class ObsEngine : public QObject {
     void stop();
     void saveReplay();
     void toggleRecording();
+    void setMicMuted(bool muted);
     void stats();
     void shutdown();
   signals:
@@ -41,6 +42,9 @@ class ObsEngine : public QObject {
     obs_source_t *source_ = nullptr, *audio_ = nullptr, *mic_ = nullptr;
     obs_scene_t *scene_ = nullptr;
     obs_encoder_t *video_ = nullptr, *aac_ = nullptr;
+    // Optional extra MP4 tracks: 1 = game/system only, 2 = microphone only. Track 0 stays the full mix.
+    obs_encoder_t *tracks_[2]{};
+    void releaseTracks();
     obs_output_t *replay_ = nullptr, *record_ = nullptr;
     bool createOutputs(const QString &);
     bool fallbackToSoftware();

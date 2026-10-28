@@ -10,6 +10,24 @@ export const metadata: Metadata = {
 
 const releases = [
   {
+    version: "0.8.0",
+    date: "28 octobre 2026",
+    summary: "Marqueurs, pistes audio séparées, recadrage, presets d’export et une bibliothèque qui se range toute seule.",
+    changes: [
+      "Pistes audio séparées : le jeu et le micro sont enregistrés à part, et l’éditeur règle le volume de chacun.",
+      "Deux durées de clip : F8 garde la durée choisie, Maj+F8 garde tout le tampon.",
+      "Marqueurs posés d’une touche pendant la partie, visibles sur la timeline de l’éditeur (N / Maj+N pour naviguer).",
+      "Touche pour couper le micro, ou mode push-to-talk.",
+      "Son de confirmation à la sauvegarde d’un clip.",
+      "Nettoyage automatique du stockage (taille max et/ou ancienneté) vers la corbeille Windows ; les favoris sont protégés.",
+      "Bibliothèque : filtre par jeu et sélection multiple (favoris, tags, corbeille en lot).",
+      "Éditeur : recadrage (libre, 16:9, 9:16, 1:1) et capture d’une image en PNG, copiée dans le presse-papiers.",
+      "Presets d’export Discord (moins de 10 Mo), YouTube et vertical 9:16, plus l’export GIF et WebP animé.",
+      "Accueil : images perdues par l’encodeur et taille du tampon en mémoire.",
+    ],
+    url: "https://github.com/Lololegeek/ClipForge/releases/tag/v0.8.0",
+  },
+  {
     version: "0.7.0",
     date: "25 octobre 2026",
     summary: "Les réglages se modifient pendant le replay, la capture de jeu est plus fiable et le micro est plus simple à activer.",

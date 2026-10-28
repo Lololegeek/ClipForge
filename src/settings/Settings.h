@@ -7,8 +7,13 @@ struct Settings {
                               microphone = "disabled";
     int width = 1920, height = 1080, fps = 60, replaySeconds = 60, bitrate = 16000, memoryMB = 512;
     int saveKey = 0x77;
+    // Optional F-keys (0 = off). Shift+saveKey always keeps the whole buffer; saveKey keeps clipSeconds (0 = all).
+    int markerKey = 0, micKey = 0, clipSeconds = 0;
+    // Library cleanup limits (0 = off). Favourites are never removed.
+    int cleanupGB = 0, cleanupDays = 0;
     double systemVolume = 1.0, micVolume = 1.0;
     bool closeToTray = true, autoCapture = false, startMinimized = false, gameOverlay = true, autoUpdate = true, alwaysReplay = true;
+    bool separateTracks = true, pushToTalk = false, saveSound = true;
     QJsonObject profiles;
     static Settings defaults();
     static Settings fromJson(const QJsonObject &o);

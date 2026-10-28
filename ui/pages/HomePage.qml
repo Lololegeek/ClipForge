@@ -41,6 +41,12 @@ ColumnLayout {
                     font.family: Theme.mono
                     font.pixelSize: 16
                 }
+                Text {
+                    visible: (appController.metrics.encoderLoad || 0) > 2
+                    text: "  ⚠ encodeur saturé"
+                    color: Theme.danger
+                    font.pixelSize: 12
+                }
             }
             Item {
                 Layout.fillWidth: true
@@ -100,7 +106,7 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: 28
         Repeater {
-            model: [["Clips", clipLibrary.count], ["RAM", Math.round(appController.metrics.ramMB || 0) + " Mo"], ["Capture", Number(appController.metrics.fps || 0).toFixed(1) + " FPS"], ["Stockage libre", Number(appController.metrics.diskGB || 0).toFixed(1) + " Go"]]
+            model: [["Clips", clipLibrary.count], ["RAM", Math.round(appController.metrics.ramMB || 0) + " Mo"], ["Capture", Number(appController.metrics.fps || 0).toFixed(1) + " FPS"], ["Images perdues", Number(appController.metrics.encoderLoad || 0).toFixed(1) + " %"], ["Tampon", Math.round(appController.metrics.bufferMB || 0) + " Mo"], ["Stockage libre", Number(appController.metrics.diskGB || 0).toFixed(1) + " Go"]]
             delegate: Column {
                 required property var modelData
                 spacing: 6
@@ -119,6 +125,20 @@ ColumnLayout {
         }
         Item {
             Layout.fillWidth: true
+        }
+        Rectangle {
+            visible: appController.micMuted && appController.config.microphone !== "disabled"
+            implicitWidth: micLabel.implicitWidth + 20
+            implicitHeight: 28
+            radius: 14
+            color: Theme.raised
+            Text {
+                id: micLabel
+                anchors.centerIn: parent
+                text: appController.config.pushToTalk ? "Micro · push-to-talk" : "Micro coupé"
+                color: Theme.danger
+                font.pixelSize: 12
+            }
         }
     }
     RowLayout {

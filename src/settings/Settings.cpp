@@ -31,6 +31,14 @@ QJsonObject Settings::json() const {
     STR(bitrate);
     STR(memoryMB);
     STR(saveKey);
+    STR(markerKey);
+    STR(micKey);
+    STR(clipSeconds);
+    STR(cleanupGB);
+    STR(cleanupDays);
+    STR(separateTracks);
+    STR(pushToTalk);
+    STR(saveSound);
     STR(systemVolume);
     STR(micVolume);
     STR(closeToTray);
@@ -69,6 +77,14 @@ Settings Settings::fromJson(const QJsonObject &o) {
     I(bitrate);
     I(memoryMB);
     I(saveKey);
+    I(markerKey);
+    I(micKey);
+    I(clipSeconds);
+    I(cleanupGB);
+    I(cleanupDays);
+    B(separateTracks);
+    B(pushToTalk);
+    B(saveSound);
     B(closeToTray);
     B(autoCapture);
     B(startMinimized);
@@ -104,6 +120,17 @@ QString Settings::validate() const {
         return "Source audio invalide.";
     if (saveKey < 0x70 || saveKey > 0x87)
         return "Choisissez une touche entre F1 et F24.";
+    for (int key : {markerKey, micKey})
+        if (key && (key < 0x70 || key > 0x87 || key == saveKey))
+            return "Raccourcis : F1 à F24, chacun différent de la touche de sauvegarde.";
+    if (markerKey && markerKey == micKey)
+        return "Le marqueur et le micro doivent utiliser des touches différentes.";
+    if (pushToTalk && !micKey)
+        return "Le push-to-talk exige une touche micro.";
+    if (clipSeconds && (clipSeconds < 5 || clipSeconds > replaySeconds))
+        return "La durée du clip court doit tenir dans le tampon (5 s minimum).";
+    if (cleanupGB < 0 || cleanupGB > 100000 || cleanupDays < 0 || cleanupDays > 3650)
+        return "Nettoyage : 0 à 100000 Go, 0 à 3650 jours.";
     if (!std::isfinite(systemVolume) || !std::isfinite(micVolume) || systemVolume < 0 || systemVolume > 2 ||
         micVolume < 0 || micVolume > 2)
         return "Volumes invalides.";

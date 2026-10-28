@@ -1,7 +1,10 @@
 #include "ClipModel.h"
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QRegularExpression>
 #include <QSqlError>
 #include <QSqlQuery>
@@ -21,6 +24,8 @@ ClipModel::ClipModel(QString path, QObject *p) : QAbstractListModel(p) {
            "TEXT,thumbnail TEXT,duration REAL,size INTEGER,created TEXT,game TEXT DEFAULT '',favorite "
            "INTEGER DEFAULT 0,tags TEXT DEFAULT '')");
     q.exec("CREATE INDEX IF NOT EXISTS clips_created ON clips(created DESC)");
+    // 0.8: marker positions (seconds from the clip start, JSON array). Fails harmlessly once the column exists.
+    q.exec("ALTER TABLE clips ADD COLUMN markers TEXT DEFAULT ''");
     reload();
 }
 ClipModel::~ClipModel() {
@@ -43,7 +48,8 @@ int ClipModel::count() const {
 QHash<int, QByteArray> ClipModel::roleNames() const {
     return {{Id, "clipId"},           {Name, "clipName"},     {Path, "filePath"}, {Url, "fileUrl"},
             {Thumbnail, "thumbnail"}, {Duration, "duration"}, {Size, "fileSize"}, {Created, "created"},
-            {Game, "game"},           {Favorite, "favorite"}, {Tags, "tags"},     {Missing, "missing"}};
+            {Game, "game"},           {Favorite, "favorite"}, {Tags, "tags"},     {Missing, "missing"},
+            {Markers, "markers"}};
 }
 QVariant ClipModel::data(const QModelIndex &i, int r) const {
     if (i.row() < 0 || i.row() >= rows_.size())
@@ -74,13 +80,15 @@ QVariant ClipModel::data(const QModelIndex &i, int r) const {
         return v["tags"];
     case Missing:
         return v["missing"];
+    case Markers:
+        return QJsonDocument::fromJson(v["markers"].toString().toUtf8()).array().toVariantList();
     default:
         return {};
     }
 }
 QString ClipModel::where() const {
     return " WHERE (name LIKE :search ESCAPE '!' OR game LIKE :search ESCAPE '!' OR tags LIKE :search ESCAPE '!')" +
-           QString(favorites_ ? " AND favorite=1" : "");
+           QString(favorites_ ? " AND favorite=1" : "") + QString(game_.isNull() ? "" : " AND game=:game");
 }
 QString ClipModel::pattern() const {
     // Typed % and _ are literal characters, not SQL wildcards.
@@ -115,12 +123,27 @@ void ClipModel::filter(QString s, QString o, bool f) {
     favorites_ = f;
     reload();
 }
+void ClipModel::filterGame(QString game) {
+    // A null string shows every game; an empty one the clips without a detected game.
+    game_ = game == "*" ? QString() : game.isNull() ? QString("") : game;
+    reload();
+}
+QVariantList ClipModel::gameList() const {
+    QVariantList games;
+    QSqlQuery q(db_);
+    if (q.exec("SELECT game,COUNT(*) FROM clips GROUP BY game ORDER BY COUNT(*) DESC, game ASC"))
+        while (q.next())
+            games << QVariantMap{{"game", q.value(0).toString()}, {"count", q.value(1).toInt()}};
+    return games;
+}
 void ClipModel::reload() {
     beginResetModel();
     rows_.clear();
     QSqlQuery q(db_);
     q.prepare("SELECT COUNT(*) FROM clips" + where());
     q.bindValue(":search", pattern());
+    if (!game_.isNull())
+        q.bindValue(":game", game_);
     total_ = q.exec() && q.next() ? q.value(0).toInt() : 0;
     endResetModel();
     fetchMore({});
@@ -136,6 +159,8 @@ void ClipModel::fetchMore(const QModelIndex &p) {
     q.prepare("SELECT * FROM clips" + where() + " ORDER BY " + order_ +
               (order_ == "name" ? " ASC" : " DESC") + " LIMIT 100 OFFSET :offset");
     q.bindValue(":search", pattern());
+    if (!game_.isNull())
+        q.bindValue(":game", game_);
     q.bindValue(":offset", rows_.size());
     if (!q.exec())
         return;
@@ -161,19 +186,23 @@ QVariantMap ClipModel::get(int i) const {
 }
 void ClipModel::upsert(const QVariantMap &m) {
     QSqlQuery q(db_);
-    q.prepare("INSERT INTO clips(path,name,duration,size,created,game) "
-              "VALUES(:path,:name,:duration,:size,:created,:game) ON CONFLICT(path) DO UPDATE SET "
-              "duration=excluded.duration,size=excluded.size");
+    q.prepare("INSERT INTO clips(path,name,duration,size,created,game,markers) "
+              "VALUES(:path,:name,:duration,:size,:created,:game,:markers) ON CONFLICT(path) DO UPDATE SET "
+              "duration=excluded.duration,size=excluded.size,"
+              "markers=CASE WHEN excluded.markers<>'' THEN excluded.markers ELSE markers END");
     for (auto key : QStringList{"path", "name", "duration", "size", "created", "game"})
         q.bindValue(":" + key, m.value(key));
+    q.bindValue(":markers", m.value("markers").toString());
     if (!q.exec()) {
         emit failure(q.lastError().text());
         return;
     }
     for (int i = 0; i < rows_.size(); ++i)
         if (rows_[i]["path"] == m.value("path")) {
-            patch(i, {{"duration", m.value("duration")}, {"size", m.value("size")}, {"missing", false}},
-                  {Duration, Size, Missing});
+            QVariantMap values{{"duration", m.value("duration")}, {"size", m.value("size")}, {"missing", false}};
+            if (!m.value("markers").toString().isEmpty())
+                values["markers"] = m.value("markers");
+            patch(i, values, {Duration, Size, Missing, Markers});
             return;
         }
     reload();
@@ -261,5 +290,74 @@ bool ClipModel::remove(int id, bool trash) {
     } else if (ok)
         reload();
     return ok;
+}
+int ClipModel::favoriteMany(QVariantList ids, bool value) {
+    int done = 0;
+    for (const auto &id : ids)
+        done += QSqlQuery(db_).exec(QString("UPDATE clips SET favorite=%1 WHERE id=%2").arg(value ? 1 : 0).arg(id.toInt()));
+    reload();
+    return done;
+}
+int ClipModel::tagMany(QVariantList ids, QString tag) {
+    tag = tag.trimmed();
+    if (tag.isEmpty())
+        return 0;
+    int done = 0;
+    for (const auto &id : ids) {
+        QSqlQuery q(db_);
+        q.prepare("SELECT tags FROM clips WHERE id=?");
+        q.addBindValue(id.toInt());
+        if (!q.exec() || !q.next())
+            continue;
+        // Tags are comma separated; adding one keeps the existing ones and never duplicates it.
+        QStringList tags;
+        for (const auto &t : q.value(0).toString().split(',', Qt::SkipEmptyParts))
+            tags << t.trimmed();
+        if (!tags.contains(tag, Qt::CaseInsensitive))
+            tags << tag;
+        done += this->tags(id.toInt(), tags.join(", "));
+    }
+    return done;
+}
+int ClipModel::removeMany(QVariantList ids) {
+    int done = 0;
+    for (const auto &id : ids)
+        done += remove(id.toInt());
+    return done;
+}
+int ClipModel::cleanup(qint64 maxBytes, int maxDays) {
+    if (maxBytes <= 0 && maxDays <= 0)
+        return 0;
+    struct Entry {
+        int id;
+        qint64 size;
+        QString created;
+        bool favorite;
+    };
+    QVector<Entry> all;
+    qint64 total = 0;
+    QSqlQuery q(db_);
+    if (!q.exec("SELECT id,size,created,favorite FROM clips ORDER BY created ASC"))
+        return 0;
+    while (q.next()) {
+        all.push_back({q.value(0).toInt(), q.value(1).toLongLong(), q.value(2).toString(), q.value(3).toBool()});
+        total += all.back().size;
+    }
+    const QString limit =
+        maxDays > 0 ? QDateTime::currentDateTime().addDays(-maxDays).toString(Qt::ISODateWithMs) : QString();
+    int removed = 0;
+    for (const auto &e : all) {
+        if (e.favorite)
+            continue;
+        const bool tooOld = !limit.isEmpty() && e.created < limit;
+        const bool overQuota = maxBytes > 0 && total > maxBytes;
+        if (!tooOld && !overQuota)
+            continue;
+        if (remove(e.id)) {
+            total -= e.size;
+            ++removed;
+        }
+    }
+    return removed;
 }
 } // namespace cf

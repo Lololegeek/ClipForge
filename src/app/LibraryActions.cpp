@@ -83,8 +83,16 @@ void Controller::selectClip(int i) {
     auto probe = new QProcess(this);
     connect(probe, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
             [this, probe, path = project_.source](int, QProcess::ExitStatus) {
-                if (project_.source == path)
-                    project_.hasAudio = !probe->readAllStandardOutput().trimmed().isEmpty();
+                if (project_.source == path) {
+                    // One line per audio stream: 3 means mix + game + microphone, editable separately.
+                    const auto lines = QString::fromUtf8(probe->readAllStandardOutput()).split('\n', Qt::SkipEmptyParts);
+                    int tracks = 0;
+                    for (const auto &l : lines)
+                        tracks += !l.trimmed().isEmpty();
+                    project_.hasAudio = tracks > 0;
+                    project_.audioTracks = std::max(1, tracks);
+                    emit editChanged();
+                }
                 probe->deleteLater();
             });
     probe->start(QFileInfo(QCoreApplication::applicationDirPath() + "/tools/ffprobe.exe").exists()

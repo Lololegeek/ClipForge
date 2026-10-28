@@ -63,6 +63,7 @@ bool ObsEngine::createOutputs(const QString &id) {
         obs_encoder_release(aac_);
         aac_ = nullptr;
     }
+    releaseTracks();
     const auto b = id.toUtf8();
     if (!obs_get_encoder_codec(b.constData()))
         return false;
@@ -104,6 +105,22 @@ bool ObsEngine::createOutputs(const QString &id) {
         return false;
     obs_output_set_video_encoder(replay_, video_);
     obs_output_set_audio_encoder(replay_, aac_, 0);
+    if (settings_.separateTracks && audio_ && mic_) {
+        // Mixer 0 keeps everything (players and Discord read the first track); mixers 1 and 2 isolate each source.
+        obs_source_set_audio_mixers(audio_, 1 | 2);
+        obs_source_set_audio_mixers(mic_, 1 | 4);
+        const char *names[] = {"ClipForge AAC game", "ClipForge AAC microphone"};
+        for (int i = 0; i < 2; ++i) {
+            e = obs_data_create();
+            obs_data_set_int(e, "bitrate", 160);
+            tracks_[i] = obs_audio_encoder_create("ffmpeg_aac", names[i], e, size_t(i + 1), nullptr);
+            obs_data_release(e);
+            if (!tracks_[i])
+                break;
+            obs_encoder_set_audio(tracks_[i], obs_get_audio());
+            obs_output_set_audio_encoder(replay_, tracks_[i], size_t(i + 1));
+        }
+    }
     signal_handler_connect(obs_output_get_signal_handler(replay_), "saved", onSaved, this);
     signal_handler_connect(obs_output_get_signal_handler(replay_), "stop", onReplayStop, this);
     qInfo().noquote() << "Starting replay encoder" << id << "codec" << codec;
@@ -116,6 +133,17 @@ bool ObsEngine::createOutputs(const QString &id) {
     }
     encoderName_ = QString::fromUtf8(obs_encoder_get_display_name(b.constData()));
     return true;
+}
+void ObsEngine::releaseTracks() {
+    for (auto &t : tracks_)
+        if (t) {
+            obs_encoder_release(t);
+            t = nullptr;
+        }
+}
+void ObsEngine::setMicMuted(bool muted) {
+    if (mic_)
+        obs_source_set_muted(mic_, muted);
 }
 void ObsEngine::saveReplay() {
     if (!replay_ || !obs_output_active(replay_) || stopping_) {
@@ -218,6 +246,9 @@ void ObsEngine::toggleRecording() {
     }
     obs_output_set_video_encoder(record_, video_);
     obs_output_set_audio_encoder(record_, aac_, 0);
+    for (int i = 0; i < 2; ++i)
+        if (tracks_[i])
+            obs_output_set_audio_encoder(record_, tracks_[i], size_t(i + 1));
     signal_handler_connect(obs_output_get_signal_handler(record_), "stop", onRecordStop, this);
     if (!obs_output_start(record_)) {
         emit failure("L'enregistrement n'a pas démarré.");

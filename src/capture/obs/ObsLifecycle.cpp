@@ -65,6 +65,7 @@ void ObsEngine::releasePipeline() {
         obs_encoder_release(aac_);
         aac_ = nullptr;
     }
+    releaseTracks();
     for (int i = 0; i < 3; ++i)
         obs_set_output_source(i, nullptr);
     if (scene_) {
@@ -101,6 +102,19 @@ void ObsEngine::stats() {
         {"bufferSeconds", replay_ ? std::min(qint64(settings_.replaySeconds), elapsed_.elapsed() / 1000) : 0},
         {"sourceWidth", source_ ? obs_source_get_width(source_) : 0},
         {"sourceHeight", source_ ? obs_source_get_height(source_) : 0}};
+    if (replay_) {
+        // Encoder load: frames the encoder could not take in time, plus the compressed size held in memory.
+        auto v = obs_get_video();
+        const auto encoded = video_output_get_total_frames(v), skipped = video_output_get_skipped_frames(v);
+        m["skipped"] = qulonglong(skipped);
+        m["encoderLoad"] = encoded ? 100.0 * double(skipped) / double(encoded + skipped) : 0.0;
+        int audioKbps = 192;
+        for (auto t : tracks_)
+            audioKbps += t ? 160 : 0;
+        const double seconds = m["bufferSeconds"].toDouble();
+        m["bufferMB"] = std::min(double(settings_.memoryMB), (settings_.bitrate + audioKbps) * seconds / 8.0 / 1024.0);
+        m["audioTracks"] = 1 + (tracks_[0] ? 1 : 0) + (tracks_[1] ? 1 : 0);
+    }
     FILETIME creation, exit, kernel, user;
     if (GetProcessTimes(GetCurrentProcess(), &creation, &exit, &kernel, &user)) {
         ULARGE_INTEGER k{}, u{};

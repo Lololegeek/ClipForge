@@ -115,7 +115,7 @@ class MediaTests : public QObject {
         project.segments = {{1, 2, 0.5}, {4, 6, 2}};
         cf::MediaJobs jobs(tools_, QFileInfo(output_).absolutePath() + "/thumb");
         QSignalSpy done(&jobs, &cf::MediaJobs::exported), errors(&jobs, &cf::MediaJobs::failure);
-        QVERIFY(jobs.exportVideo(project, output_, 720, 30, "h264"));
+        QVERIFY(jobs.exportVideo(project, output_, {.height = 720, .fps = 30}));
         QTRY_VERIFY_WITH_TIMEOUT(done.count() + errors.count() > 0, 45000);
         if (errors.count())
             qWarning() << errors.first();
@@ -127,7 +127,7 @@ class MediaTests : public QObject {
         QVERIFY(p.waitForFinished(10000));
         double d = p.readAllStandardOutput().trimmed().toDouble();
         QVERIFY2(std::abs(d - 3) < 0.2, qPrintable(QString::number(d)));
-        QVERIFY(!jobs.exportVideo(project, output_, 720, 30, "h264"));
+        QVERIFY(!jobs.exportVideo(project, output_, {.height = 720, .fps = 30}));
     }
 };
 int main(int argc, char **argv) {

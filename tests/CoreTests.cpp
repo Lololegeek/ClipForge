@@ -53,14 +53,42 @@ class CoreTests : public QObject {
         cf::EditProject p;
         p.source = "a path/source.mp4";
         p.segments = {{1, 4, 0.25}, {5, 8, 4}};
-        auto a = cf::MediaJobs::exportArguments(p, "out.mp4", 720, 60, "h264");
+        cf::ExportOptions o;
+        o.height = 720;
+        auto a = cf::MediaJobs::exportArguments(p, "out.mp4", o);
         auto graph = a[a.indexOf("-filter_complex") + 1];
         QVERIFY(graph.contains("atempo=0.5,atempo=0.5"));
         QVERIFY(graph.contains("atempo=2,atempo=2"));
         QVERIFY(graph.contains("concat=n=2:v=1:a=1"));
         QVERIFY(a.contains(p.source));
+        QVERIFY(graph.contains("scale=-2:720"));
+        // Separate game/microphone tracks are remixed with their own levels.
+        p.audioTracks = 3;
+        p.micVolume = 0.5;
+        graph = cf::MediaJobs::exportArguments(p, "out.mp4", o)[a.indexOf("-filter_complex") + 1];
+        QVERIFY(graph.contains("[0:a:1]") && graph.contains("[0:a:2]") && graph.contains("volume=0.5"));
+        // Crop and 9:16 are applied once, after the concatenation.
+        p.cropX = 0.25;
+        p.cropW = 0.5;
+        o.vertical = true;
+        graph = cf::MediaJobs::exportArguments(p, "out.mp4", o)[a.indexOf("-filter_complex") + 1];
+        QVERIFY(graph.contains("[c]null,crop=") && graph.contains("ih*9/16"));
+        // A size cap switches to a computed bitrate.
+        o = {};
+        o.maxMB = 10;
+        a = cf::MediaJobs::exportArguments(p, "out.mp4", o);
+        QVERIFY(a.contains("-b:v") && !a.contains("-crf"));
+        // Animated formats drop the audio.
+        o = {};
+        o.format = "gif";
+        a = cf::MediaJobs::exportArguments(p, "out.gif", o);
+        QVERIFY(a[a.indexOf("-filter_complex") + 1].contains("paletteuse") && !a.contains("[a]"));
+        o.format = "webp";
+        QVERIFY(cf::MediaJobs::exportArguments(p, "out.webp", o).contains("libwebp_anim"));
         p.hasAudio = false;
-        a = cf::MediaJobs::exportArguments(p, "out.mp4", 0, 30, "h264");
+        o = {};
+        o.fps = 30;
+        a = cf::MediaJobs::exportArguments(p, "out.mp4", o);
         QVERIFY(!a[a.indexOf("-filter_complex") + 1].contains("[0:a"));
     }
     void libraryPersistence() {
@@ -80,7 +108,14 @@ class CoreTests : public QObject {
                           {"created", "2026-10-18"},
                           {"game", "Test"}});
             QCOMPARE(model.count(), 1);
+            QCOMPARE(model.gameList().size(), 1);
+            model.filterGame("Other");
+            QCOMPARE(model.count(), 0);
+            model.filterGame("*");
+            QCOMPARE(model.count(), 1);
             int id = model.get(0)["id"].toInt();
+            QCOMPARE(model.tagMany({id}, "ace"), 1);
+            QVERIFY(model.get(0)["tags"].toString().contains("ace"));
             QVERIFY(model.favorite(id, true));
             QVERIFY(model.tags(id, "finale"));
             model.filter("finale", "created", true);

@@ -42,6 +42,8 @@ class Controller : public QObject {
     Q_PROPERTY(double updateProgress READ updateProgress NOTIFY changed)
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY editChanged)
     Q_PROPERTY(bool canRedo READ canRedo NOTIFY editChanged)
+    Q_PROPERTY(bool micMuted READ micMuted NOTIFY changed)
+    Q_PROPERTY(QVariantMap edit READ edit NOTIFY editChanged)
   public:
     Controller(QString runtime, QString data, QString tools, bool test = false);
     ~Controller();
@@ -119,12 +121,19 @@ class Controller : public QObject {
     bool canRedo() const {
         return !redo_.isEmpty();
     }
+    bool micMuted() const {
+        return micMuted_;
+    }
+    // Editor state that is not a segment: audio track count and the crop rectangle (0..1).
+    QVariantMap edit() const;
     ClipModel *library() {
         return &library_;
     }
     Q_INVOKABLE void start();
     Q_INVOKABLE void stop();
     Q_INVOKABLE void saveReplay();
+    Q_INVOKABLE void saveFull();
+    Q_INVOKABLE void addMarker();
     void toggleRecording(); // self-test only
     Q_INVOKABLE bool apply(QVariantMap settings);
     Q_INVOKABLE void selectClip(int index);
@@ -137,7 +146,11 @@ class Controller : public QObject {
     Q_INVOKABLE void removeSegment(int index);
     Q_INVOKABLE void undo();
     Q_INVOKABLE void redo();
-    Q_INVOKABLE void exportClip(int height, int fps, QString codec, double volume);
+    // options: format, height, fps, codec, crf, maxMB, vertical, volume, gameVolume, micVolume.
+    Q_INVOKABLE void exportClip(QVariantMap options);
+    Q_INVOKABLE void setCrop(double x, double y, double w, double h);
+    Q_INVOKABLE void captureFrame(double seconds);
+    Q_INVOKABLE void cleanupNow();
     Q_INVOKABLE void saveProject();
     Q_INVOKABLE void loadProject();
     Q_INVOKABLE void saveProfile(QString executable, QString name);
@@ -191,5 +204,22 @@ class Controller : public QObject {
     void scan();
     void connectTray();
     void scheduleReplayRetry();
+    // A clip request waits for OBS to write the file: how much of it to keep and when the key was pressed.
+    struct PendingClip {
+        double keep;
+        qint64 at;
+    };
+    QList<PendingClip> pendingClips_;
+    QVector<qint64> markers_;                   // epoch ms of markers still inside the buffer
+    QHash<QString, QVariantList> clipMarkers_; // saved path -> marker offsets from the clip end (s)
+    bool micMuted_ = false;
+    QTimer pttTimer_;
+    void requestClip(double seconds);
+    void clipSaved(QString path);
+    void clipImported(QVariantMap data);
+    void setMicMuted(bool muted);
+    void micKey();
+    void configureHotkeys();
+    int cleanupLibrary();
 };
 } // namespace cf

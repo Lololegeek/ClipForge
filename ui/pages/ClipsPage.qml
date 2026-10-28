@@ -9,6 +9,28 @@ ColumnLayout {
     spacing: 18
     property bool listMode: false
     property var contextClip: ({})
+    // Multi-selection: clip id -> true. Reassigned on every change so bindings update.
+    property bool selecting: false
+    property var picked: ({})
+    readonly property var pickedIds: Object.keys(picked).map(Number)
+    function togglePick(id) {
+        var p = Object.assign({}, picked);
+        if (p[id])
+            delete p[id];
+        else
+            p[id] = true;
+        picked = p;
+    }
+    function pickAll() {
+        var p = {};
+        for (var i = 0; i < gallery.count; ++i)
+            p[clipLibrary.get(i).id] = true;
+        picked = p;
+    }
+    function endSelection() {
+        selecting = false;
+        picked = {};
+    }
     function applyFilter() {
         clipLibrary.filter(search.text, sort.model[sort.currentIndex].value, onlyFav.checked);
     }
@@ -83,19 +105,86 @@ ColumnLayout {
             ]
             onActivated: page.applyFilter()
         }
+        CCombo {
+            id: gameFilter
+            implicitWidth: 200
+            textRole: "text"
+            model: [{
+                    text: "Tous les jeux",
+                    value: "*"
+                }].concat(clipLibrary.gameList.map(function (g) {
+                return {
+                    text: (g.game || "Sans jeu") + "  (" + g.count + ")",
+                    value: g.game
+                };
+            }))
+            onActivated: clipLibrary.filterGame(model[currentIndex].value)
+        }
         CheckBox {
             id: onlyFav
             text: "Favoris"
             onToggled: page.applyFilter()
         }
         ActionButton {
+            text: page.selecting ? "Terminer" : "Sélectionner"
+            primary: page.selecting
+            onClicked: page.selecting ? page.endSelection() : page.selecting = true
+        }
+        ActionButton {
             text: page.listMode ? "Grille" : "Liste"
             onClicked: page.listMode = !page.listMode
         }
     }
+    Rectangle {
+        visible: page.selecting
+        Layout.fillWidth: true
+        implicitHeight: 52
+        radius: 8
+        color: Theme.accentSurface
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 14
+            anchors.rightMargin: 8
+            spacing: 8
+            Text {
+                text: page.pickedIds.length === 0 ? "Clique sur des clips pour les sélectionner" : page.pickedIds.length + (page.pickedIds.length > 1 ? " clips sélectionnés" : " clip sélectionné")
+                color: Theme.text
+                Layout.fillWidth: true
+            }
+            ActionButton {
+                text: "Tout sélectionner"
+                onClicked: page.pickAll()
+            }
+            ActionButton {
+                text: "Favoris"
+                enabled: page.pickedIds.length > 0
+                onClicked: clipLibrary.favoriteMany(page.pickedIds, true)
+            }
+            ActionButton {
+                text: "Retirer des favoris"
+                enabled: page.pickedIds.length > 0
+                onClicked: clipLibrary.favoriteMany(page.pickedIds, false)
+            }
+            ActionButton {
+                text: "Ajouter un tag"
+                enabled: page.pickedIds.length > 0
+                onClicked: {
+                    batchTagField.text = "";
+                    batchTag.open();
+                    batchTagField.forceActiveFocus();
+                }
+            }
+            ActionButton {
+                text: "Corbeille…"
+                danger: true
+                enabled: page.pickedIds.length > 0
+                onClicked: batchDelete.open()
+            }
+        }
+    }
     Text {
         visible: clipLibrary.count === 0
-        text: search.text.length > 0 || onlyFav.checked ? "Aucun clip ne correspond à ces filtres." : "Aucun clip pour l'instant. Active le replay et appuie sur F" + (appController.config.saveKey - 111) + ", ou importe une vidéo."
+        text: search.text.length > 0 || onlyFav.checked || gameFilter.currentIndex > 0 ? "Aucun clip ne correspond à ces filtres." : "Aucun clip pour l'instant. Active le replay et appuie sur F" + (appController.config.saveKey - 111) + ", ou importe une vidéo."
         color: Theme.secondary
         wrapMode: Text.Wrap
         Layout.fillWidth: true
@@ -126,10 +215,13 @@ ColumnLayout {
             required property string tags
             width: gallery.cellWidth - 14
             height: gallery.cellHeight - 14
+            readonly property bool picked: !!page.picked[clipId]
             Rectangle {
                 anchors.fill: parent
                 color: hover.hovered ? Theme.raised : Theme.surface
                 radius: 10
+                border.color: Theme.accent
+                border.width: parent.picked ? 2 : 0
             }
             Rectangle {
                 x: image.x
@@ -206,8 +298,31 @@ ColumnLayout {
                 id: hover
             }
             TapHandler {
-                onTapped: if (!missing)
-                    appController.selectClip(index)
+                onTapped: {
+                    if (page.selecting)
+                        page.togglePick(clipId);
+                    else if (!missing)
+                        appController.selectClip(index);
+                }
+            }
+            Rectangle {
+                visible: page.selecting
+                x: image.x + 8
+                y: image.y + 8
+                width: 22
+                height: 22
+                radius: 5
+                color: parent.picked ? Theme.accent : "#c0101119"
+                border.color: parent.picked ? Theme.accent : Theme.text
+                border.width: 2
+                Text {
+                    anchors.centerIn: parent
+                    visible: parent.parent.picked
+                    text: "✓"
+                    color: "#101119"
+                    font.pixelSize: 14
+                    font.bold: true
+                }
             }
             Button {
                 id: menuButton
@@ -313,6 +428,31 @@ ColumnLayout {
         acceptText: "Mettre à la corbeille"
         danger: true
         onAccepted: clipLibrary.remove(page.contextClip.id, true)
+    }
+    CDialog {
+        id: batchDelete
+        title: "Mettre " + page.pickedIds.length + " clip(s) à la corbeille ?"
+        body: "Les fichiers seront déplacés dans la corbeille Windows. Tu pourras les restaurer depuis l'Explorateur."
+        acceptText: "Mettre à la corbeille"
+        danger: true
+        onAccepted: {
+            clipLibrary.removeMany(page.pickedIds);
+            page.picked = {};
+        }
+    }
+    CDialog {
+        id: batchTag
+        title: "Ajouter un tag à " + page.pickedIds.length + " clip(s)"
+        body: "Le tag s'ajoute à ceux déjà présents."
+        acceptText: "Ajouter"
+        acceptEnabled: batchTagField.text.trim().length > 0
+        onAccepted: clipLibrary.tagMany(page.pickedIds, batchTagField.text.trim())
+        CField {
+            id: batchTagField
+            Layout.fillWidth: true
+            placeholderText: "finale"
+            onAccepted: batchTag.submit()
+        }
     }
     CDialog {
         id: rename

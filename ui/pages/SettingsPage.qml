@@ -48,6 +48,16 @@ ColumnLayout {
         }
         return rows
     }
+    // Optional keys: first row disables the shortcut.
+    function optionalKeyRows() {
+        return [{ name: "Désactivée", value: 0 }].concat(keyRows())
+    }
+    function keyIndex(rows, value) {
+        for (var i = 0; i < rows.length; ++i)
+            if (rows[i].value === value)
+                return i
+        return 0
+    }
     function apply() {
         draft.mode = ["display", "window", "game"][mode.currentIndex];
         draft.target = target.currentIndex >= 0 ? target.model[target.currentIndex].value : "";
@@ -70,6 +80,14 @@ ColumnLayout {
         draft.alwaysReplay = alwaysReplay.checked;
         draft.gameOverlay = gameOverlay.checked;
         draft.saveKey = saveKey.model[saveKey.currentIndex].value;
+        draft.markerKey = markerKey.model[markerKey.currentIndex].value;
+        draft.micKey = micKey.model[micKey.currentIndex].value;
+        draft.pushToTalk = pushToTalk.checked;
+        draft.clipSeconds = Number(clipSeconds.text);
+        draft.separateTracks = separateTracks.checked;
+        draft.saveSound = saveSound.checked;
+        draft.cleanupGB = Number(cleanupGB.text);
+        draft.cleanupDays = Number(cleanupDays.text);
         appController.apply(draft);
     }
     RowLayout {
@@ -179,10 +197,23 @@ ColumnLayout {
                     }
                     Layout.fillWidth: true
                 }
+                Label {
+                    text: "Durée d'un clip (s)"
+                }
+                CField {
+                    id: clipSeconds
+                    text: settings.draft.clipSeconds
+                    placeholderText: "0 = tout le tampon"
+                    validator: IntValidator {
+                        bottom: 0
+                        top: 3600
+                    }
+                    Layout.fillWidth: true
+                }
             }
             Text {
                 Layout.fillWidth: true
-                text: "15 · 30 · 60 · 90 · 120 · 180 · 300 · 600 secondes, ou durée personnalisée. Le moteur conserve des paquets compressés en mémoire. Le tampon temporaire sur disque n'est pas disponible."
+                text: "La touche de sauvegarde garde les dernières secondes définies par « Durée d'un clip » (0 = tout le tampon) ; Maj + la touche garde toujours tout le tampon. 15 · 30 · 60 · 90 · 120 · 180 · 300 · 600 secondes, ou durée personnalisée. Le moteur conserve des paquets compressés en mémoire. Le tampon temporaire sur disque n'est pas disponible."
                 wrapMode: Text.Wrap
                 color: Theme.secondary
                 font.pixelSize: 12
@@ -376,8 +407,14 @@ ColumnLayout {
                     Layout.fillWidth: true
                 }
             }
+            CheckBox {
+                id: separateTracks
+                enabled: settings.stopped
+                text: "Pistes séparées : jeu et micro enregistrés à part (réglables dans l'éditeur)"
+                checked: settings.draft.separateTracks
+            }
             Text {
-                text: "Une piste AAC mixée. Le mode application requiert une fenêtre sélectionnée et un Windows compatible ; aucun repli silencieux vers tout le système."
+                text: (separateTracks.checked ? "Trois pistes AAC : le mix, le jeu seul et le micro seul. Les lecteurs lisent la première." : "Une piste AAC mixée.") + " Le mode application requiert une fenêtre sélectionnée et un Windows compatible ; aucun repli silencieux vers tout le système."
                 wrapMode: Text.Wrap
                 Layout.fillWidth: true
                 color: Theme.secondary
@@ -410,6 +447,44 @@ ColumnLayout {
                     currentIndex: settings.draft.saveKey - 112
                     Layout.fillWidth: true
                 }
+                Label {
+                    text: "Poser un marqueur"
+                }
+                CCombo {
+                    id: markerKey
+                    textRole: "name"
+                    model: settings.optionalKeyRows()
+                    currentIndex: settings.keyIndex(model, settings.draft.markerKey)
+                    Layout.fillWidth: true
+                }
+                Label {
+                    text: "Micro (couper / parler)"
+                }
+                CCombo {
+                    id: micKey
+                    textRole: "name"
+                    model: settings.optionalKeyRows()
+                    currentIndex: settings.keyIndex(model, settings.draft.micKey)
+                    Layout.fillWidth: true
+                }
+            }
+            CheckBox {
+                id: pushToTalk
+                enabled: micKey.currentIndex > 0
+                text: "Push-to-talk : le micro n'est enregistré que tant que la touche est maintenue"
+                checked: settings.draft.pushToTalk
+            }
+            CheckBox {
+                id: saveSound
+                text: "Jouer un son quand un clip est sauvegardé"
+                checked: settings.draft.saveSound
+            }
+            Text {
+                Layout.fillWidth: true
+                text: "Le marqueur repère un moment dans le tampon ; il apparaît sur la timeline de l'éditeur (N / Maj+N pour sauter d'un marqueur à l'autre)."
+                wrapMode: Text.Wrap
+                color: Theme.secondary
+                font.pixelSize: 12
             }
             Rectangle {
                 Layout.fillWidth: true
@@ -486,9 +561,50 @@ ColumnLayout {
                     onClicked: appController.reveal("")
                 }
             }
+            GridLayout {
+                columns: 2
+                columnSpacing: 24
+                rowSpacing: 12
+                Layout.fillWidth: true
+                Label {
+                    text: "Espace max des clips (Go)"
+                    Layout.preferredWidth: 180
+                }
+                CField {
+                    id: cleanupGB
+                    text: settings.draft.cleanupGB
+                    placeholderText: "0 = illimité"
+                    validator: IntValidator {
+                        bottom: 0
+                        top: 100000
+                    }
+                    Layout.fillWidth: true
+                }
+                Label {
+                    text: "Garder les clips (jours)"
+                }
+                CField {
+                    id: cleanupDays
+                    text: settings.draft.cleanupDays
+                    placeholderText: "0 = pour toujours"
+                    validator: IntValidator {
+                        bottom: 0
+                        top: 3650
+                    }
+                    Layout.fillWidth: true
+                }
+            }
+            RowLayout {
+                spacing: 10
+                ActionButton {
+                    text: "Nettoyer maintenant"
+                    enabled: Number(appController.config.cleanupGB) > 0 || Number(appController.config.cleanupDays) > 0
+                    onClicked: appController.cleanupNow()
+                }
+            }
             Text {
                 Layout.fillWidth: true
-                text: "Aucun clip sauvegardé n'est supprimé automatiquement. Une réserve de 256 Mo est requise pour démarrer une capture."
+                text: Number(cleanupGB.text) > 0 || Number(cleanupDays.text) > 0 ? "Au-delà de ces limites, les clips les plus anciens partent dans la corbeille Windows (restaurables). Les favoris ne sont jamais supprimés. Une réserve de 256 Mo est requise pour démarrer une capture." : "Aucun clip sauvegardé n'est supprimé automatiquement (0 = sans limite). Une réserve de 256 Mo est requise pour démarrer une capture."
                 color: Theme.secondary
                 wrapMode: Text.Wrap
                 font.pixelSize: 12

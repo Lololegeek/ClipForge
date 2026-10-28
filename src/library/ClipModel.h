@@ -6,6 +6,8 @@ namespace cf {
 class ClipModel : public QAbstractListModel {
     Q_OBJECT
     Q_PROPERTY(int count READ count NOTIFY countChanged)
+    Q_PROPERTY(QVariantList gameList READ gameList NOTIFY countChanged)
+    Q_PROPERTY(QString gameFilter READ gameFilter NOTIFY countChanged)
   public:
     enum Role {
         Id = Qt::UserRole + 1,
@@ -19,7 +21,8 @@ class ClipModel : public QAbstractListModel {
         Game,
         Favorite,
         Tags,
-        Missing
+        Missing,
+        Markers
     };
     explicit ClipModel(QString database, QObject *p = nullptr);
     ~ClipModel();
@@ -32,6 +35,17 @@ class ClipModel : public QAbstractListModel {
     bool isOpen() const;
     QString error() const;
     Q_INVOKABLE void filter(QString search, QString order = "created", bool favorites = false);
+    Q_INVOKABLE void filterGame(QString game);
+    QString gameFilter() const {
+        return game_;
+    }
+    // Games present in the library with their clip count, most clips first.
+    QVariantList gameList() const;
+    Q_INVOKABLE int favoriteMany(QVariantList ids, bool value);
+    Q_INVOKABLE int tagMany(QVariantList ids, QString tag);
+    Q_INVOKABLE int removeMany(QVariantList ids);
+    // Moves the oldest non-favourite clips to the recycle bin until both limits hold (0 = no limit).
+    int cleanup(qint64 maxBytes, int maxDays);
     Q_INVOKABLE QVariantMap get(int index) const;
     Q_INVOKABLE bool favorite(int id, bool value);
     Q_INVOKABLE bool rename(int id, QString name);
@@ -48,7 +62,7 @@ class ClipModel : public QAbstractListModel {
   private:
     QSqlDatabase db_;
     QVector<QVariantMap> rows_;
-    QString search_, order_ = "created";
+    QString search_, order_ = "created", game_;
     bool favorites_ = false;
     int total_ = 0;
     QString where() const;

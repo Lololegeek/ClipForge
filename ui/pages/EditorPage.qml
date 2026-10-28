@@ -17,6 +17,47 @@ ColumnLayout {
     // Set while "Lire le passage" plays the selected range; playback pauses at the out point.
     property bool previewing: false
     property real volumeBeforeMute: 1
+    property bool cropping: false
+    readonly property var markers: appController.selected.markers || []
+    readonly property bool separateAudio: (appController.edit.audioTracks || 1) >= 3
+    // Export presets: index 0 uses the manual resolution / FPS / codec choices.
+    readonly property var presets: [
+        { name: "Personnalisé" },
+        { name: "Discord ≤ 10 Mo", format: "mp4", maxMB: 10, fps: 60 },
+        { name: "YouTube 1080p60", format: "mp4", height: 1080, fps: 60, crf: 18 },
+        { name: "Vertical 9:16", format: "mp4", vertical: true, height: 1920, fps: 60 },
+        { name: "GIF animé", format: "gif", height: 360, fps: 15 },
+        { name: "WebP animé", format: "webp", height: 480, fps: 20 }
+    ]
+    function exportOptions() {
+        var o = {
+            volume: volumeControl.value,
+            gameVolume: gameVolume.value,
+            micVolume: micVolume.value
+        };
+        if (preset.currentIndex === 0) {
+            o.format = "mp4";
+            o.height = [0, 720, 1080, 1440, 2160][resolution.currentIndex];
+            o.fps = [30, 60, 120][fps.currentIndex];
+            o.codec = codec.currentIndex === 0 ? "h264" : "hevc";
+            return o;
+        }
+        var p = presets[preset.currentIndex];
+        for (var k in p)
+            if (k !== "name")
+                o[k] = p[k];
+        return o;
+    }
+    function nextMarker(forward) {
+        var now = player.position / 1000, best = -1;
+        for (var i = 0; i < markers.length; ++i) {
+            var m = markers[i];
+            if (forward ? (m > now + 0.2 && (best < 0 || m < best)) : (m < now - 0.2 && (best < 0 || m > best)))
+                best = m;
+        }
+        if (best >= 0)
+            seekTo(best);
+    }
     readonly property real outputSeconds: {
         var total = 0;
         for (var i = 0; i < appController.segments.length; ++i) {
@@ -136,6 +177,21 @@ ColumnLayout {
         }
     }
     Shortcut {
+        sequence: "N"
+        enabled: editor.hasClip && editor.markers.length > 0
+        onActivated: editor.nextMarker(true)
+    }
+    Shortcut {
+        sequence: "Shift+N"
+        enabled: editor.hasClip && editor.markers.length > 0
+        onActivated: editor.nextMarker(false)
+    }
+    Shortcut {
+        sequence: "Escape"
+        enabled: editor.cropping
+        onActivated: editor.cropping = false
+    }
+    Shortcut {
         sequences: [StandardKey.Undo]
         enabled: appController.canUndo
         onActivated: appController.undo()
@@ -178,7 +234,7 @@ ColumnLayout {
         }
         Text {
             visible: editor.hasClip
-            text: "Espace lire · I / O entrée / sortie · P aperçu · ← → 1 s (Maj 5 s) · , . image · M muet"
+            text: "Espace lire · I / O entrée / sortie · P aperçu · ← → 1 s (Maj 5 s) · , . image · M muet · N marqueur"
             color: Theme.secondary
             opacity: 0.8
             font.pixelSize: 11
@@ -237,8 +293,147 @@ ColumnLayout {
             volume: volumeControl.value
         }
         TapHandler {
-            enabled: editor.hasClip
+            enabled: editor.hasClip && !editor.cropping
             onTapped: editor.togglePlay()
+        }
+        Item {
+            id: cropLayer
+            // Normalised crop being edited; committed to the project when a drag ends.
+            property real cx: 0
+            property real cy: 0
+            property real cw: 1
+            property real ch: 1
+            property real startX: 0
+            property real startY: 0
+            property real startW: 1
+            property real startH: 1
+            visible: editor.hasClip && (editor.cropping || !!appController.edit.cropped)
+            x: output.contentRect.x
+            y: output.contentRect.y
+            width: output.contentRect.width
+            height: output.contentRect.height
+            function sync() {
+                var c = appController.edit.crop || [0, 0, 1, 1];
+                cx = c[0];
+                cy = c[1];
+                cw = c[2];
+                ch = c[3];
+            }
+            function commit() {
+                appController.setCrop(cx, cy, cw, ch);
+            }
+            // Width / height of the crop in pixels for the chosen aspect, 0 when free.
+            function ratio() {
+                return [0, 16 / 9, 9 / 16, 1][aspect.currentIndex];
+            }
+            function applyRatio() {
+                var r = ratio();
+                if (r <= 0 || width <= 0 || height <= 0)
+                    return;
+                ch = Math.min(1, cw * width / r / height);
+                cw = Math.min(cw, ch * height * r / width);
+                cx = Math.max(0, Math.min(cx, 1 - cw));
+                cy = Math.max(0, Math.min(cy, 1 - ch));
+                commit();
+            }
+            Component.onCompleted: sync()
+            Connections {
+                target: appController
+                function onEditChanged() {
+                    if (!moveDrag.active && !sizeDrag.active)
+                        cropLayer.sync();
+                }
+            }
+            // Dimmed area outside the crop.
+            Rectangle {
+                width: parent.width
+                height: cropBox.y
+                color: "#a0000000"
+            }
+            Rectangle {
+                y: cropBox.y + cropBox.height
+                width: parent.width
+                height: parent.height - y
+                color: "#a0000000"
+            }
+            Rectangle {
+                y: cropBox.y
+                width: cropBox.x
+                height: cropBox.height
+                color: "#a0000000"
+            }
+            Rectangle {
+                x: cropBox.x + cropBox.width
+                y: cropBox.y
+                width: parent.width - x
+                height: cropBox.height
+                color: "#a0000000"
+            }
+            Rectangle {
+                id: cropBox
+                x: cropLayer.cx * cropLayer.width
+                y: cropLayer.cy * cropLayer.height
+                width: cropLayer.cw * cropLayer.width
+                height: cropLayer.ch * cropLayer.height
+                color: "transparent"
+                border.color: Theme.accent
+                border.width: editor.cropping ? 2 : 1
+                DragHandler {
+                    id: moveDrag
+                    enabled: editor.cropping
+                    target: null
+                    cursorShape: Qt.SizeAllCursor
+                    onActiveChanged: {
+                        if (active) {
+                            cropLayer.startX = cropLayer.cx;
+                            cropLayer.startY = cropLayer.cy;
+                        } else {
+                            cropLayer.commit();
+                        }
+                    }
+                    onTranslationChanged: if (active) {
+                        cropLayer.cx = Math.max(0, Math.min(1 - cropLayer.cw, cropLayer.startX + translation.x / cropLayer.width));
+                        cropLayer.cy = Math.max(0, Math.min(1 - cropLayer.ch, cropLayer.startY + translation.y / cropLayer.height));
+                    }
+                }
+                Rectangle {
+                    visible: editor.cropping
+                    width: 16
+                    height: 16
+                    radius: 3
+                    x: parent.width - width / 2
+                    y: parent.height - height / 2
+                    color: Theme.accent
+                    border.color: Theme.text
+                    DragHandler {
+                        id: sizeDrag
+                        target: null
+                        cursorShape: Qt.SizeFDiagCursor
+                        onActiveChanged: {
+                            if (active) {
+                                cropLayer.startW = cropLayer.cw;
+                                cropLayer.startH = cropLayer.ch;
+                            } else {
+                                cropLayer.commit();
+                            }
+                        }
+                        onTranslationChanged: if (active) {
+                            var w = Math.max(0.05, Math.min(1 - cropLayer.cx, cropLayer.startW + translation.x / cropLayer.width));
+                            var h = Math.max(0.05, Math.min(1 - cropLayer.cy, cropLayer.startH + translation.y / cropLayer.height));
+                            var r = cropLayer.ratio();
+                            if (r > 0) {
+                                h = w * cropLayer.width / r / cropLayer.height;
+                                if (cropLayer.cy + h > 1) {
+                                    h = 1 - cropLayer.cy;
+                                    w = h * cropLayer.height * r / cropLayer.width;
+                                }
+                            }
+                            cropLayer.cw = w;
+                            cropLayer.ch = h;
+                        }
+                    }
+                }
+            }
         }
         Text {
             visible: !editor.hasClip
@@ -284,6 +479,52 @@ ColumnLayout {
             currentIndex: 2
             onActivated: player.playbackRate = editor.speeds[currentIndex]
         }
+        ActionButton {
+            text: "Capturer l'image"
+            enabled: editor.hasClip
+            onClicked: appController.captureFrame(player.position / 1000)
+        }
+    }
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: 8
+        visible: editor.hasClip
+        ActionButton {
+            text: editor.cropping ? "Terminer le recadrage" : appController.edit.cropped ? "Modifier le recadrage" : "Recadrer"
+            primary: editor.cropping
+            onClicked: {
+                if (!editor.cropping)
+                    cropLayer.sync();
+                editor.cropping = !editor.cropping;
+            }
+        }
+        CCombo {
+            id: aspect
+            visible: editor.cropping
+            implicitWidth: 110
+            model: ["Libre", "16:9", "9:16", "1:1"]
+            onActivated: cropLayer.applyRatio()
+        }
+        ActionButton {
+            visible: !!appController.edit.cropped
+            text: "Retirer le recadrage"
+            onClicked: appController.setCrop(0, 0, 1, 1)
+        }
+        Text {
+            visible: editor.cropping
+            text: "Glisse le cadre pour le déplacer, la poignée pour le redimensionner."
+            color: Theme.secondary
+            font.pixelSize: 12
+        }
+        Item {
+            Layout.fillWidth: true
+        }
+        Text {
+            visible: editor.markers.length > 0
+            text: editor.markers.length + (editor.markers.length > 1 ? " marqueurs" : " marqueur") + " · N / Maj+N pour y aller"
+            color: Theme.secondary
+            font.pixelSize: 12
+        }
     }
     RangeSlider {
         id: trimRange
@@ -314,6 +555,18 @@ ColumnLayout {
                 radius: 4
                 color: Theme.accentSurface
                 border.color: Theme.accent
+            }
+            Repeater {
+                model: editor.markers
+                Rectangle {
+                    required property var modelData
+                    x: modelData / Math.max(1, editor.clipLength) * parent.width - 2
+                    y: -7
+                    width: 4
+                    height: parent.height + 14
+                    radius: 2
+                    color: Theme.success
+                }
             }
             // Playhead within the trim track.
             Rectangle {
@@ -480,18 +733,72 @@ ColumnLayout {
             stepSize: 0.05
             Layout.preferredWidth: 100
         }
+        // Clips recorded with separate tracks rebuild their mix from the game and microphone levels.
+        Text {
+            visible: editor.separateAudio
+            text: "Jeu " + Math.round(gameVolume.value * 100) + " %"
+            color: Theme.secondary
+            Layout.preferredWidth: 80
+        }
+        CSlider {
+            id: gameVolume
+            visible: editor.separateAudio
+            from: 0
+            to: 2
+            value: 1
+            stepSize: 0.05
+            Layout.preferredWidth: 100
+        }
+        Text {
+            visible: editor.separateAudio
+            text: "Micro " + Math.round(micVolume.value * 100) + " %"
+            color: Theme.secondary
+            Layout.preferredWidth: 80
+        }
+        CSlider {
+            id: micVolume
+            visible: editor.separateAudio
+            from: 0
+            to: 2
+            value: 1
+            stepSize: 0.05
+            Layout.preferredWidth: 100
+        }
+        Item {
+            Layout.fillWidth: true
+        }
+    }
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: 10
+        CCombo {
+            id: preset
+            implicitWidth: 180
+            model: editor.presets.map(function (p) {
+                return p.name;
+            })
+        }
         CCombo {
             id: resolution
+            visible: preset.currentIndex === 0
             model: ["Source", "720p", "1080p", "1440p", "2160p"]
         }
         CCombo {
             id: fps
+            visible: preset.currentIndex === 0
             model: ["30 FPS", "60 FPS", "120 FPS"]
             currentIndex: 1
         }
         CCombo {
             id: codec
+            visible: preset.currentIndex === 0
             model: ["H.264", "HEVC"]
+        }
+        Text {
+            visible: preset.currentIndex > 0
+            text: ["", "MP4 H.264, débit calculé pour rester sous 10 Mo", "MP4 1080p, 60 FPS, haute qualité", "Recadré au centre en 1080×1920", "15 FPS, 360p, sans son", "20 FPS, 480p, sans son"][preset.currentIndex]
+            color: Theme.secondary
+            font.pixelSize: 12
         }
         Item {
             Layout.fillWidth: true
@@ -502,10 +809,10 @@ ColumnLayout {
             onClicked: appController.reveal(appController.lastExport)
         }
         ActionButton {
-            text: appController.exportBusy ? "Export " + Math.round(appController.exportProgress * 100) + " %" : "Exporter en MP4"
+            text: appController.exportBusy ? "Export " + Math.round(appController.exportProgress * 100) + " %" : "Exporter en " + ({ gif: "GIF", webp: "WebP" }[editor.presets[preset.currentIndex].format] || "MP4")
             primary: true
             enabled: !appController.exportBusy && appController.segments.length > 0
-            onClicked: appController.exportClip([0, 720, 1080, 1440, 2160][resolution.currentIndex], [30, 60, 120][fps.currentIndex], codec.currentIndex === 0 ? "h264" : "hevc", volumeControl.value)
+            onClicked: appController.exportClip(editor.exportOptions())
         }
     }
     Rectangle {

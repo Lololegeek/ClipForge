@@ -7,6 +7,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
+#include <QImage>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QMenu>
@@ -70,20 +71,58 @@ void Controller::redo() {
     project_ = redo_.takeLast();
     emit editChanged();
 }
-void Controller::exportClip(int height, int fps, QString codec, double volume) {
+QVariantMap Controller::edit() const {
+    return {{"audioTracks", project_.audioTracks},
+            {"crop", QVariantList{project_.cropX, project_.cropY, project_.cropW, project_.cropH}},
+            {"cropped", project_.cropped()}};
+}
+void Controller::setCrop(double x, double y, double w, double h) {
+    w = std::clamp(w, 0.05, 1.0);
+    h = std::clamp(h, 0.05, 1.0);
+    x = std::clamp(x, 0.0, 1.0 - w);
+    y = std::clamp(y, 0.0, 1.0 - h);
+    if (x == project_.cropX && y == project_.cropY && w == project_.cropW && h == project_.cropH)
+        return;
+    checkpoint();
+    project_.cropX = x;
+    project_.cropY = y;
+    project_.cropW = w;
+    project_.cropH = h;
+    emit editChanged();
+}
+void Controller::exportClip(QVariantMap o) {
+    ExportOptions options;
+    options.format = o.value("format", "mp4").toString();
+    options.height = o.value("height", 0).toInt();
+    options.fps = o.value("fps", 60).toInt();
+    options.codec = o.value("codec", "h264").toString();
+    options.crf = o.value("crf", 20).toInt();
+    options.maxMB = o.value("maxMB", 0).toDouble();
+    options.vertical = o.value("vertical", false).toBool();
+    const QString ext = options.format == "mp4" ? "mp4" : options.format;
+    const QString label = ext == "gif" ? "GIF animé (*.gif)" : ext == "webp" ? "WebP animé (*.webp)" : "MP4 (*.mp4)";
     auto dest = QFileDialog::getSaveFileName(
-        nullptr, "Exporter en MP4",
-        settings_.clips + "/Export " + QDateTime::currentDateTime().toString("yyyy-MM-dd HH-mm-ss") + ".mp4",
-        "MP4 (*.mp4)");
+        nullptr, "Exporter",
+        settings_.clips + "/Export " + QDateTime::currentDateTime().toString("yyyy-MM-dd HH-mm-ss") + "." + ext,
+        label);
     if (dest.isEmpty())
         return;
-    if (!dest.endsWith(".mp4", Qt::CaseInsensitive))
-        dest += ".mp4";
+    if (!dest.endsWith("." + ext, Qt::CaseInsensitive))
+        dest += "." + ext;
     auto project = project_;
-    project.volume = volume;
+    project.volume = o.value("volume", 1.0).toDouble();
+    project.gameVolume = o.value("gameVolume", 1.0).toDouble();
+    project.micVolume = o.value("micVolume", 1.0).toDouble();
     progress_ = 0;
     lastExport_.clear();
-    jobs_.exportVideo(project, dest, height, fps, codec);
+    jobs_.exportVideo(project, dest, options);
+}
+void Controller::captureFrame(double seconds) {
+    if (project_.source.isEmpty())
+        return;
+    const QString dest = settings_.clips + "/Captures/" + QFileInfo(project_.source).completeBaseName() + " " +
+                         QString::number(seconds, 'f', 2).replace('.', ',') + "s.png";
+    jobs_.snapshot(project_.source, std::max(0.0, seconds), dest);
 }
 void Controller::saveProject() {
     auto path =
