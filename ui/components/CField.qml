@@ -14,7 +14,7 @@ TextField {
     font.family: Theme.font
     font.pixelSize: 14
     background: Rectangle {
-        radius: 7
+        radius: Theme.radiusSm
         color: Theme.navigation
         border.width: control.activeFocus ? 2 : 1
         border.color: control.activeFocus ? Theme.accent : Theme.line

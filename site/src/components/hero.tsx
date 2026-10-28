@@ -35,7 +35,7 @@ export function Hero() {
           </Button>
         </div>
         <p className="text-muted mt-4 text-sm">
-          Version 0.8.0 · Windows x64 · aucune connexion requise pour capturer
+          Version 0.9.0 · Windows x64 · aucune connexion requise pour capturer
         </p>
       </div>
       <div className="mx-auto mt-16 w-[min(72rem,100%-2rem)] sm:w-[min(72rem,100%-3rem)]">

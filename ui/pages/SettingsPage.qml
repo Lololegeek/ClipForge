@@ -14,7 +14,7 @@ ColumnLayout {
         var kind = ["display", "window", "game"][mode.currentIndex]
         var rows = appController.targets.filter(function (t) { return t.mode === (kind === "game" ? "window" : kind) })
         if (kind === "game")
-            rows.unshift({ mode: "game", name: "Jeu plein écran · automatique", value: "" })
+            rows.unshift({ mode: "game", name: "Jeu en plein écran (détection automatique)", value: "" })
         return rows
     }
     function restoreTarget() {
@@ -29,7 +29,7 @@ ColumnLayout {
     }
     function codecId() { return ["h264", "hevc", "av1"][codec.currentIndex] || "h264" }
     function encoderRows() {
-        return [{ name: "Automatique · matériel puis repli", id: "auto", codec: codecId() }].concat(
+        return [{ name: "Automatique", id: "auto", codec: codecId() }].concat(
             appController.encoders.filter(function (e) { return e.codec === codecId() }))
     }
     function restoreEncoder() {
@@ -114,7 +114,7 @@ ColumnLayout {
     }
     Text {
         visible: !settings.stopped
-        text: "Patiente : la capture est occupée (démarrage ou sauvegarde)."
+        text: "Un clip est en cours de sauvegarde. Les réglages seront modifiables dans un instant."
         color: Theme.accent
     }
     ScrollView {
@@ -123,7 +123,7 @@ ColumnLayout {
         clip: true
         contentWidth: availableWidth
         ColumnLayout {
-            width: parent.width
+            width: Math.min(parent.width, 780)
             spacing: 20
             Text {
                 text: "Capture"
@@ -144,7 +144,7 @@ ColumnLayout {
                 CCombo {
                     id: mode
                     Layout.fillWidth: true
-                    model: ["Écran · DXGI", "Fenêtre · WGC", "Jeu · OBS"]
+                    model: ["Écran entier", "Fenêtre", "Jeu"]
                     currentIndex: Math.max(0, ["display", "window", "game"].indexOf(settings.draft.mode))
                 }
                 Label {
@@ -186,7 +186,7 @@ ColumnLayout {
                     Layout.fillWidth: true
                 }
                 Label {
-                    text: "Mémoire du tampon (Mo)"
+                    text: "Mémoire max du replay (Mo)"
                 }
                 CField {
                     id: memory
@@ -203,7 +203,7 @@ ColumnLayout {
                 CField {
                     id: clipSeconds
                     text: settings.draft.clipSeconds
-                    placeholderText: "0 = tout le tampon"
+                    placeholderText: "0 = tout le replay"
                     validator: IntValidator {
                         bottom: 0
                         top: 3600
@@ -213,7 +213,7 @@ ColumnLayout {
             }
             Text {
                 Layout.fillWidth: true
-                text: "La touche de sauvegarde garde les dernières secondes définies par « Durée d'un clip » (0 = tout le tampon) ; Maj + la touche garde toujours tout le tampon. 15 · 30 · 60 · 90 · 120 · 180 · 300 · 600 secondes, ou durée personnalisée. Le moteur conserve des paquets compressés en mémoire. Le tampon temporaire sur disque n'est pas disponible."
+                text: "La touche de sauvegarde garde la « Durée d'un clip » (0 = tout le replay). Maj + la touche garde toujours tout le replay."
                 wrapMode: Text.Wrap
                 color: Theme.secondary
                 font.pixelSize: 12
@@ -289,9 +289,9 @@ ColumnLayout {
                     Layout.fillWidth: true
                     textRole: "name"
                     model: [
-                        { name: "H.264 · logiciel ou matériel", id: "h264", available: true },
-                        { name: "HEVC · matériel requis", id: "hevc", available: appController.encoders.some(function (e) { return e.codec === "hevc" }) },
-                        { name: "AV1 · matériel requis", id: "av1", available: appController.encoders.some(function (e) { return e.codec === "av1" }) }
+                        { name: "H.264 · lisible partout", id: "h264", available: true },
+                        { name: "HEVC · fichiers plus légers", id: "hevc", available: appController.encoders.some(function (e) { return e.codec === "hevc" }) },
+                        { name: "AV1 · fichiers les plus légers", id: "av1", available: appController.encoders.some(function (e) { return e.codec === "av1" }) }
                     ]
                     currentIndex: ["h264", "hevc", "av1"].indexOf(settings.draft.codec)
                     onActivated: {
@@ -302,7 +302,7 @@ ColumnLayout {
                     }
                 }
                 Label {
-                    text: "Encodeur"
+                    text: "Carte d'encodage"
                 }
                 CCombo {
                     id: encoder
@@ -313,7 +313,7 @@ ColumnLayout {
                     Component.onCompleted: settings.restoreEncoder()
                 }
                 Label {
-                    text: "Débit (kbit/s)"
+                    text: "Qualité (kbit/s)"
                 }
                 CField {
                     id: bitrate
@@ -414,7 +414,7 @@ ColumnLayout {
                 checked: settings.draft.separateTracks
             }
             Text {
-                text: (separateTracks.checked ? "Trois pistes AAC : le mix, le jeu seul et le micro seul. Les lecteurs lisent la première." : "Une piste AAC mixée.") + " Le mode application requiert une fenêtre sélectionnée et un Windows compatible ; aucun repli silencieux vers tout le système."
+                text: (separateTracks.checked ? "Le clip contient le mélange, le jeu seul et le micro seul. Les lecteurs vidéo jouent le mélange." : "Le jeu et le micro sont mélangés dans une seule piste.") + " « Application sélectionnée seulement » demande de choisir une fenêtre comme source."
                 wrapMode: Text.Wrap
                 Layout.fillWidth: true
                 color: Theme.secondary
@@ -426,7 +426,7 @@ ColumnLayout {
                 color: Theme.line
             }
             Text {
-                text: "Raccourcis globaux"
+                text: "Raccourcis"
                 color: Theme.text
                 font.pixelSize: 19
                 font.weight: Font.DemiBold
@@ -471,7 +471,7 @@ ColumnLayout {
             CheckBox {
                 id: pushToTalk
                 enabled: micKey.currentIndex > 0
-                text: "Push-to-talk : le micro n'est enregistré que tant que la touche est maintenue"
+                text: "Push-to-talk : le micro n'enregistre que tant que la touche est maintenue"
                 checked: settings.draft.pushToTalk
             }
             CheckBox {
@@ -481,7 +481,7 @@ ColumnLayout {
             }
             Text {
                 Layout.fillWidth: true
-                text: "Le marqueur repère un moment dans le tampon ; il apparaît sur la timeline de l'éditeur (N / Maj+N pour sauter d'un marqueur à l'autre)."
+                text: "Les marqueurs apparaissent sur la timeline de l'éditeur. N et Maj+N passent de l'un à l'autre."
                 wrapMode: Text.Wrap
                 color: Theme.secondary
                 font.pixelSize: 12
@@ -499,12 +499,12 @@ ColumnLayout {
             }
             CheckBox {
                 id: alwaysReplay
-                text: "Instant Replay toujours actif dès le lancement de ClipForge"
+                text: "Activer le replay au lancement de ClipForge"
                 checked: settings.draft.alwaysReplay
             }
             CheckBox {
                 id: closeTray
-                text: "Fermer la fenêtre masque l'application dans la zone de notification"
+                text: "Réduire dans la zone de notification à la fermeture"
                 checked: settings.draft.closeToTray
             }
             CheckBox {
@@ -518,13 +518,13 @@ ColumnLayout {
                 checked: settings.draft.startMinimized
             }
             CheckBox {
-                text: "Lancer ClipForge au démarrage de Windows (dans la zone de notification)"
+                text: "Lancer ClipForge au démarrage de Windows"
                 checked: appController.autostart
                 onToggled: appController.setAutostart(checked)
             }
             CheckBox {
                 id: gameOverlay
-                text: "Afficher une notification en jeu (3 s) quand un clip est sauvegardé"
+                text: "Afficher une notification en jeu quand un clip est sauvegardé"
                 checked: settings.draft.gameOverlay
             }
             CheckBox {
@@ -604,7 +604,7 @@ ColumnLayout {
             }
             Text {
                 Layout.fillWidth: true
-                text: Number(cleanupGB.text) > 0 || Number(cleanupDays.text) > 0 ? "Au-delà de ces limites, les clips les plus anciens partent dans la corbeille Windows (restaurables). Les favoris ne sont jamais supprimés. Une réserve de 256 Mo est requise pour démarrer une capture." : "Aucun clip sauvegardé n'est supprimé automatiquement (0 = sans limite). Une réserve de 256 Mo est requise pour démarrer une capture."
+                text: Number(cleanupGB.text) > 0 || Number(cleanupDays.text) > 0 ? "Au-delà de ces limites, les clips les plus anciens vont dans la corbeille Windows. Les favoris ne sont jamais supprimés." : "Aucun clip n'est supprimé automatiquement (0 = sans limite)."
                 color: Theme.secondary
                 wrapMode: Text.Wrap
                 font.pixelSize: 12
@@ -623,10 +623,9 @@ ColumnLayout {
             }
             Text {
                 Layout.topMargin: 16
-                text: "ClipForge " + appController.version + " · C++20 / Qt 6 / libobs / FFmpeg / SQLite\nLogiciel libre GPLv3 · local, sans compte, sans télémétrie"
+                text: "ClipForge " + appController.version + " · logiciel libre, sans compte ni télémétrie"
                 color: Theme.secondary
                 font.pixelSize: 12
-                lineHeight: 1.7
             }
             Item {
                 height: 14

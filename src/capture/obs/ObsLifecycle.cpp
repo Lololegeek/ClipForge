@@ -149,7 +149,7 @@ void ObsEngine::stats() {
             }
         gameFallback_ = running;
         if (running && fallbackGameToWindow()) {
-            emit notice("Le hook de jeu n'a pas répondu : capture de la fenêtre du jeu à la place.");
+            emit notice("Le jeu n'a pas pu être capturé directement : capture de sa fenêtre à la place.");
             return;
         }
     }

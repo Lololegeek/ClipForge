@@ -18,6 +18,10 @@ ColumnLayout {
     property bool previewing: false
     property real volumeBeforeMute: 1
     property bool cropping: false
+    // Editing tools are shown only in "Modifier" mode and never in fullscreen.
+    readonly property bool tools: window.editorEditing && !window.immersive
+    onToolsChanged: if (!tools)
+        cropping = false
     readonly property var markers: appController.selected.markers || []
     readonly property bool separateAudio: (appController.edit.audioTracks || 1) >= 3
     // Export presets: index 0 uses the manual resolution / FPS / codec choices.
@@ -105,17 +109,17 @@ ColumnLayout {
     }
     Shortcut {
         sequence: "I"
-        enabled: editor.hasClip
+        enabled: editor.hasClip && editor.tools
         onActivated: editor.setIn()
     }
     Shortcut {
         sequence: "O"
-        enabled: editor.hasClip
+        enabled: editor.hasClip && editor.tools
         onActivated: editor.setOut()
     }
     Shortcut {
         sequence: "P"
-        enabled: editor.hasClip
+        enabled: editor.hasClip && editor.tools
         onActivated: editor.previewRange()
     }
     Shortcut {
@@ -140,12 +144,12 @@ ColumnLayout {
     }
     Shortcut {
         sequence: "Home"
-        enabled: editor.hasClip
+        enabled: editor.hasClip && editor.tools
         onActivated: editor.seekTo(editor.inPoint)
     }
     Shortcut {
         sequence: "End"
-        enabled: editor.hasClip
+        enabled: editor.hasClip && editor.tools
         onActivated: editor.seekTo(editor.outPoint)
     }
     Shortcut {
@@ -192,18 +196,30 @@ ColumnLayout {
         onActivated: editor.cropping = false
     }
     Shortcut {
+        sequence: "F"
+        enabled: editor.hasClip
+        onActivated: window.setImmersive(!window.immersive)
+    }
+    Shortcut {
+        sequence: "Escape"
+        enabled: window.immersive
+        onActivated: window.setImmersive(false)
+    }
+    Shortcut {
         sequences: [StandardKey.Undo]
-        enabled: appController.canUndo
+        enabled: appController.canUndo && editor.tools
         onActivated: appController.undo()
     }
     Shortcut {
         sequences: [StandardKey.Redo, "Ctrl+Y"]
-        enabled: appController.canRedo
+        enabled: appController.canRedo && editor.tools
         onActivated: appController.redo()
     }
 
     RowLayout {
+        visible: !window.immersive
         Layout.fillWidth: true
+        spacing: 8
         Text {
             text: "Éditeur"
             color: Theme.text
@@ -211,19 +227,51 @@ ColumnLayout {
             font.weight: Font.DemiBold
         }
         Item {
+            Layout.preferredWidth: 16
+        }
+        // Watch / edit switch.
+        Rectangle {
+            implicitWidth: modeRow.implicitWidth + 8
+            implicitHeight: 40
+            radius: Theme.radiusSm
+            color: Theme.surface
+            Row {
+                id: modeRow
+                anchors.centerIn: parent
+                spacing: 4
+                Repeater {
+                    model: ["Regarder", "Modifier"]
+                    delegate: ActionButton {
+                        required property string modelData
+                        required property int index
+                        implicitHeight: 32
+                        text: modelData
+                        primary: window.editorEditing === (index === 1)
+                        onClicked: window.editorEditing = index === 1
+                    }
+                }
+            }
+        }
+        Item {
             Layout.fillWidth: true
         }
         ActionButton {
+            visible: window.editorEditing
             text: "Ouvrir un projet"
-            onClicked: appController.loadProject()
+            onClicked: {
+                window.editorEditing = true;
+                appController.loadProject();
+            }
         }
         ActionButton {
+            visible: window.editorEditing
             text: "Enregistrer le projet"
             enabled: editor.hasClip
             onClicked: appController.saveProject()
         }
     }
     RowLayout {
+        visible: !window.immersive
         Layout.fillWidth: true
         spacing: 12
         Text {
@@ -234,7 +282,7 @@ ColumnLayout {
         }
         Text {
             visible: editor.hasClip
-            text: "Espace lire · I / O entrée / sortie · P aperçu · ← → 1 s (Maj 5 s) · , . image · M muet · N marqueur"
+            text: editor.tools ? "Espace lire · I / O entrée / sortie · P aperçu · ← → 1 s (Maj 5 s) · , . image · M muet · N marqueur" : "Espace lire · ← → 1 s (Maj 5 s) · F plein écran · M muet"
             color: Theme.secondary
             opacity: 0.8
             font.pixelSize: 11
@@ -252,8 +300,8 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.fillHeight: true
         Layout.minimumHeight: 150
-        color: "#07080d"
-        radius: 8
+        color: window.immersive ? "#000000" : "#07080d"
+        radius: window.immersive ? 0 : Theme.radiusSm
         // The library thumbnail shows instantly while the decoder opens the file.
         Image {
             anchors.fill: parent
@@ -294,7 +342,14 @@ ColumnLayout {
         }
         TapHandler {
             enabled: editor.hasClip && !editor.cropping
-            onTapped: editor.togglePlay()
+            // A double click toggles fullscreen and cancels the play/pause of its first click.
+            onTapped: function (eventPoint, button) {
+                editor.togglePlay();
+                if (tapCount === 2) {
+                    editor.togglePlay();
+                    window.setImmersive(!window.immersive);
+                }
+            }
         }
         Item {
             id: cropLayer
@@ -307,7 +362,7 @@ ColumnLayout {
             property real startY: 0
             property real startW: 1
             property real startH: 1
-            visible: editor.hasClip && (editor.cropping || !!appController.edit.cropped)
+            visible: editor.hasClip && editor.tools && (editor.cropping || !!appController.edit.cropped)
             x: output.contentRect.x
             y: output.contentRect.y
             width: output.contentRect.width
@@ -452,6 +507,9 @@ ColumnLayout {
     }
     RowLayout {
         Layout.fillWidth: true
+        Layout.leftMargin: window.immersive ? 16 : 0
+        Layout.rightMargin: window.immersive ? 16 : 0
+        Layout.bottomMargin: window.immersive ? 14 : 0
         ActionButton {
             text: player.playbackState === MediaPlayer.PlayingState ? "Pause" : "Lire"
             enabled: editor.hasClip
@@ -479,16 +537,36 @@ ColumnLayout {
             currentIndex: 2
             onActivated: player.playbackRate = editor.speeds[currentIndex]
         }
+        Text {
+            text: volumeControl.value > 0 ? "Son " + Math.round(volumeControl.value * 100) + " %" : "Muet"
+            color: Theme.secondary
+            font.pixelSize: 12
+            Layout.preferredWidth: 58
+            horizontalAlignment: Text.AlignRight
+        }
+        CSlider {
+            id: volumeControl
+            from: 0
+            to: 2
+            value: 1
+            stepSize: 0.05
+            Layout.preferredWidth: 90
+        }
         ActionButton {
             text: "Capturer l'image"
             enabled: editor.hasClip
             onClicked: appController.captureFrame(player.position / 1000)
         }
+        ActionButton {
+            text: window.immersive ? "Quitter le plein écran" : "Plein écran"
+            enabled: editor.hasClip
+            onClicked: window.setImmersive(!window.immersive)
+        }
     }
     RowLayout {
         Layout.fillWidth: true
         spacing: 8
-        visible: editor.hasClip
+        visible: editor.hasClip && editor.tools
         ActionButton {
             text: editor.cropping ? "Terminer le recadrage" : appController.edit.cropped ? "Modifier le recadrage" : "Recadrer"
             primary: editor.cropping
@@ -530,6 +608,7 @@ ColumnLayout {
         id: trimRange
         Layout.fillWidth: true
         implicitHeight: 32
+        visible: editor.tools
         enabled: editor.hasClip
         from: 0
         to: Math.max(1, editor.clipLength)
@@ -600,6 +679,7 @@ ColumnLayout {
         }
     }
     RowLayout {
+        visible: editor.tools
         Layout.fillWidth: true
         spacing: 8
         ActionButton {
@@ -648,6 +728,7 @@ ColumnLayout {
         }
     }
     RowLayout {
+        visible: editor.tools
         Text {
             text: "Passages exportés dans cet ordre"
             color: Theme.secondary
@@ -675,8 +756,9 @@ ColumnLayout {
         }
     }
     ListView {
+        visible: editor.tools
         Layout.fillWidth: true
-        Layout.preferredHeight: 88
+        Layout.preferredHeight: Math.min(88, appController.segments.length * 44)
         clip: true
         model: appController.segments
         spacing: 4
@@ -718,21 +800,9 @@ ColumnLayout {
         }
     }
     RowLayout {
+        visible: editor.tools && editor.separateAudio
         Layout.fillWidth: true
         spacing: 10
-        Text {
-            text: "Volume " + Math.round(volumeControl.value * 100) + " %"
-            color: Theme.secondary
-            Layout.preferredWidth: 96
-        }
-        CSlider {
-            id: volumeControl
-            from: 0
-            to: 2
-            value: 1
-            stepSize: 0.05
-            Layout.preferredWidth: 100
-        }
         // Clips recorded with separate tracks rebuild their mix from the game and microphone levels.
         Text {
             visible: editor.separateAudio
@@ -769,6 +839,7 @@ ColumnLayout {
         }
     }
     RowLayout {
+        visible: editor.tools
         Layout.fillWidth: true
         spacing: 10
         CCombo {
@@ -816,7 +887,7 @@ ColumnLayout {
         }
     }
     Rectangle {
-        visible: appController.exportBusy
+        visible: appController.exportBusy && editor.tools
         Layout.fillWidth: true
         Layout.preferredHeight: 4
         radius: 2
@@ -834,10 +905,14 @@ ColumnLayout {
         }
     }
     Text {
+        visible: editor.tools
         Layout.fillWidth: true
-        text: "Montage non destructif · export précis avec réencodage · la vidéo originale reste intacte."
+        text: "Les modifications ne touchent jamais la vidéo d'origine."
         color: Theme.secondary
         font.pixelSize: 11
     }
-    Component.onDestruction: player.stop()
+    Component.onDestruction: {
+        player.stop();
+        window.setImmersive(false);
+    }
 }

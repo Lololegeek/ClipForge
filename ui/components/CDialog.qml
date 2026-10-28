@@ -32,7 +32,7 @@ Popup {
         color: "#b3101119"
     }
     background: Rectangle {
-        radius: 14
+        radius: Theme.radius
         color: Theme.raised
         border.color: Theme.line
     }

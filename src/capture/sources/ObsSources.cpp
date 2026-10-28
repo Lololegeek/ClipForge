@@ -176,7 +176,7 @@ void ObsEngine::start(Settings s) {
     emit method(captureMethod_, encoderName_);
     emit state("Buffering");
     if (video_ && QString::fromUtf8(obs_encoder_get_id(video_)) == "obs_x264" && s.encoder != "obs_x264")
-        emit notice("Encodeur matériel indisponible : capture en H.264 logiciel (CPU).");
+        emit notice("Carte graphique indisponible pour l'encodage : le processeur prend le relais.");
 }
 // The OBS game hook cannot attach to every title (launchers, anti-cheat, borderless quirks). When the chosen game
 // still sends no image, capture the same window with Windows Graphics Capture instead of leaving a black replay.

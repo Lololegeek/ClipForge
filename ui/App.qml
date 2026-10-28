@@ -25,6 +25,19 @@ ApplicationWindow {
     palette.highlightedText: Theme.canvas
     palette.placeholderText: Theme.secondary
     property int page: 0
+    // Editor mode: false shows the clip to watch, true reveals the editing tools.
+    property bool editorEditing: false
+    // Fullscreen playback hides the sidebar, header and footer.
+    property bool immersive: false
+    property int visibilityBeforeImmersive: Window.Windowed
+    function setImmersive(on) {
+        if (on === immersive)
+            return;
+        if (on)
+            visibilityBeforeImmersive = window.visibility;
+        immersive = on;
+        window.visibility = on ? Window.FullScreen : visibilityBeforeImmersive;
+    }
     property var pageNames: ["Accueil", "Mes clips", "Capture", "Éditeur", "Jeux", "Paramètres"]
     function fileUrl(p) {
         return p ? "file:///" + p.replace(/\\/g, "/") : "";
@@ -48,6 +61,7 @@ ApplicationWindow {
         anchors.fill: parent
         spacing: 0
         Rectangle {
+            visible: !window.immersive
             Layout.preferredWidth: window.width < 1100 ? 180 : 216
             Layout.fillHeight: true
             color: Theme.navigation
@@ -57,7 +71,8 @@ ApplicationWindow {
                 spacing: 8
                 RowLayout {
                     Layout.topMargin: 12
-                    Layout.bottomMargin: 36
+                    Layout.leftMargin: 6
+                    Layout.bottomMargin: 28
                     spacing: 10
                     Image {
                         source: "qrc:/assets/icons/clipforge-mark.svg"
@@ -70,7 +85,7 @@ ApplicationWindow {
                     Text {
                         text: "ClipForge"
                         color: Theme.text
-                        font.pixelSize: 22
+                        font.pixelSize: 20
                         font.weight: Font.DemiBold
                     }
                 }
@@ -80,12 +95,17 @@ ApplicationWindow {
                         required property string modelData
                         required property int index
                         Layout.fillWidth: true
-                        implicitHeight: 46
+                        implicitHeight: 42
                         text: modelData
                         background: Rectangle {
-                            radius: 8
+                            radius: Theme.radiusSm
                             color: window.page === index ? Theme.accentSurface : parent.hovered ? Theme.surface : "transparent"
                             border.color: parent.activeFocus ? Theme.accent : "transparent"
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: 150
+                                }
+                            }
                         }
                         contentItem: RowLayout {
                             spacing: 12
@@ -97,7 +117,7 @@ ApplicationWindow {
                             Text {
                                 Layout.fillWidth: true
                                 text: modelData
-                                color: window.page === index ? Theme.accent : Theme.secondary
+                                color: window.page === index ? Theme.text : Theme.secondary
                                 font.pixelSize: 14
                                 font.weight: window.page === index ? Font.DemiBold : Font.Normal
                                 verticalAlignment: Text.AlignVCenter
@@ -109,23 +129,12 @@ ApplicationWindow {
                 Item {
                     Layout.fillHeight: true
                 }
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: 1
-                    color: Theme.line
-                }
                 Text {
-                    Layout.topMargin: 14
-                    text: "LOCAL, PAR DÉFAUT"
+                    Layout.leftMargin: 12
+                    Layout.bottomMargin: 10
+                    text: "Version " + appController.version
                     color: Theme.secondary
-                    font.pixelSize: 10
-                    font.letterSpacing: 1
-                }
-                Text {
-                    Layout.bottomMargin: 14
-                    text: "ClipForge " + appController.version + " · GPLv3"
-                    color: Theme.secondary
-                    font.pixelSize: 11
+                    font.pixelSize: 12
                 }
             }
         }
@@ -134,6 +143,7 @@ ApplicationWindow {
             Layout.fillHeight: true
             spacing: 0
             Rectangle {
+                visible: !window.immersive
                 Layout.fillWidth: true
                 Layout.preferredHeight: 64
                 color: Theme.canvas
@@ -143,20 +153,20 @@ ApplicationWindow {
                     anchors.rightMargin: 30
                     spacing: 10
                     Rectangle {
-                        width: 7
-                        height: 7
+                        width: 8
+                        height: 8
                         radius: 4
                         color: ["Buffering", "Saving", "Recording"].indexOf(appController.state) >= 0 ? Theme.success : appController.state === "Error" ? Theme.danger : Theme.secondary
                     }
                     Text {
                         text: ({
-                                "Idle": "Capture en veille",
-                                "Initializing": "Initialisation…",
-                                "Buffering": "Instant Replay actif",
-                                "Saving": "Sauvegarde en cours…",
+                                "Idle": "Replay en pause",
+                                "Initializing": "Démarrage…",
+                                "Buffering": "Replay actif",
+                                "Saving": "Sauvegarde du clip…",
                                 "Recording": "Enregistrement en cours",
                                 "Stopping": "Arrêt en cours…",
-                                "Error": "Capture interrompue"
+                                "Error": "Replay interrompu"
                             })[appController.state] || appController.state
                         color: Theme.text
                         font.pixelSize: 13
@@ -165,7 +175,7 @@ ApplicationWindow {
                         Layout.fillWidth: true
                     }
                     Text {
-                        text: appController.currentGame || "Aucun profil de jeu actif"
+                        text: appController.currentGame
                         color: Theme.secondary
                         font.pixelSize: 12
                     }
@@ -178,6 +188,7 @@ ApplicationWindow {
                 }
             }
             Rectangle {
+                visible: !window.immersive
                 Layout.fillWidth: true
                 height: 1
                 color: Theme.line
@@ -186,10 +197,11 @@ ApplicationWindow {
                 id: pageLoader
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                Layout.margins: 30
+                Layout.margins: window.immersive ? 0 : 30
                 source: "pages/" + ["HomePage.qml", "ClipsPage.qml", "RecordPage.qml", "EditorPage.qml", "GamesPage.qml", "SettingsPage.qml"][window.page]
             }
             Rectangle {
+                visible: !window.immersive
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.max(40, statusText.implicitHeight + 18)
                 color: Theme.navigation
@@ -199,7 +211,7 @@ ApplicationWindow {
                     anchors.margins: 9
                     anchors.leftMargin: 30
                     anchors.rightMargin: 30
-                    text: appController.message || ("F" + (appController.config.saveKey - 111) + " : sauvegarder un clip")
+                    text: appController.message || ("F" + (appController.config.saveKey - 111) + " sauvegarde un clip · Maj+F" + (appController.config.saveKey - 111) + " garde tout le replay")
                     color: Theme.secondary
                     font.pixelSize: 12
                     wrapMode: Text.Wrap

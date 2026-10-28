@@ -18,7 +18,7 @@ ComboBox {
         elide: Text.ElideRight
     }
     background: Rectangle {
-        radius: 7
+        radius: Theme.radiusSm
         color: control.hovered ? Theme.raised : Theme.surface
         border.color: control.activeFocus ? Theme.accent : Theme.line
         border.width: control.activeFocus ? 2 : 1

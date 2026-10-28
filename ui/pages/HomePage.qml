@@ -5,21 +5,16 @@ import "../theme"
 import "../components"
 
 ColumnLayout {
-    spacing: 22
+    spacing: 24
     Text {
-        text: "Garde le meilleur."
+        text: "Accueil"
         color: Theme.text
-        font.pixelSize: 30
+        font.pixelSize: 28
         font.weight: Font.DemiBold
-    }
-    Text {
-        text: "Le jeu continue. Le moment reste."
-        color: Theme.secondary
-        font.pixelSize: 14
     }
     Panel {
         Layout.fillWidth: true
-        Layout.preferredHeight: 210
+        Layout.preferredHeight: 200
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 24
@@ -27,7 +22,7 @@ ColumnLayout {
             RowLayout {
                 Layout.fillWidth: true
                 Text {
-                    text: "Instant Replay"
+                    text: "Replay"
                     color: Theme.text
                     font.pixelSize: 20
                     font.weight: Font.DemiBold
@@ -43,7 +38,7 @@ ColumnLayout {
                 }
                 Text {
                     visible: (appController.metrics.encoderLoad || 0) > 2
-                    text: "  ⚠ encodeur saturé"
+                    text: "  Images perdues : baisse la qualité"
                     color: Theme.danger
                     font.pixelSize: 12
                 }
@@ -87,14 +82,13 @@ ColumnLayout {
                 spacing: 16
                 Text {
                     Layout.fillWidth: true
-                    text: appController.captureMethod + "\n" + appController.encoder
+                    text: Theme.sourceLabel(appController.config.mode) + " · " + appController.config.height + "p " + appController.config.fps + " FPS"
                     color: Theme.secondary
-                    font.pixelSize: 12
-                    lineHeight: 1.5
+                    font.pixelSize: 13
                     elide: Text.ElideRight
                 }
                 ActionButton {
-                    text: appController.state === "Idle" || appController.state === "Error" ? "Activer le replay" : "Arrêter"
+                    text: appController.state === "Idle" || appController.state === "Error" ? "Activer le replay" : "Mettre en pause"
                     primary: true
                     enabled: appController.engineReady && ["Initializing", "Stopping", "Saving"].indexOf(appController.state) < 0
                     onClicked: appController.state === "Idle" || appController.state === "Error" ? appController.start() : appController.stop()
@@ -104,17 +98,17 @@ ColumnLayout {
     }
     RowLayout {
         Layout.fillWidth: true
-        spacing: 28
+        spacing: 32
         Repeater {
-            model: [["Clips", clipLibrary.count], ["RAM", Math.round(appController.metrics.ramMB || 0) + " Mo"], ["Capture", Number(appController.metrics.fps || 0).toFixed(1) + " FPS"], ["Images perdues", Number(appController.metrics.encoderLoad || 0).toFixed(1) + " %"], ["Tampon", Math.round(appController.metrics.bufferMB || 0) + " Mo"], ["Stockage libre", Number(appController.metrics.diskGB || 0).toFixed(1) + " Go"]]
+            model: [["Clips", clipLibrary.count], ["Images par seconde", Number(appController.metrics.fps || 0).toFixed(0)], ["Images perdues", Number(appController.metrics.encoderLoad || 0).toFixed(1) + " %"], ["Mémoire du replay", Math.round(appController.metrics.bufferMB || 0) + " Mo"], ["Espace libre", Number(appController.metrics.diskGB || 0).toFixed(1) + " Go"]]
             delegate: Column {
                 required property var modelData
-                spacing: 6
+                spacing: 4
                 Text {
                     text: modelData[1]
                     color: Theme.text
-                    font.pixelSize: 19
-                    font.family: Theme.mono
+                    font.pixelSize: 18
+                    font.weight: Font.DemiBold
                 }
                 Text {
                     text: modelData[0]
@@ -130,12 +124,12 @@ ColumnLayout {
             visible: appController.micMuted && appController.config.microphone !== "disabled"
             implicitWidth: micLabel.implicitWidth + 20
             implicitHeight: 28
-            radius: 14
+            radius: height / 2
             color: Theme.raised
             Text {
                 id: micLabel
                 anchors.centerIn: parent
-                text: appController.config.pushToTalk ? "Micro · push-to-talk" : "Micro coupé"
+                text: appController.config.pushToTalk ? "Micro : maintiens la touche pour parler" : "Micro coupé"
                 color: Theme.danger
                 font.pixelSize: 12
             }
@@ -144,7 +138,7 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         Text {
-            text: "Derniers moments"
+            text: "Derniers clips"
             color: Theme.text
             font.pixelSize: 20
             font.weight: Font.DemiBold
@@ -160,10 +154,9 @@ ColumnLayout {
     Text {
         visible: clipLibrary.count === 0
         Layout.fillWidth: true
-        text: "Ta bibliothèque commence avec un moment.\nActive le replay, puis appuie sur F8 pour le retrouver ici."
+        text: "Aucun clip pour l'instant. Active le replay, puis appuie sur F" + (appController.config.saveKey - 111) + " pendant une partie : le clip apparaîtra ici."
         color: Theme.secondary
-        font.pixelSize: 15
-        lineHeight: 1.6
+        wrapMode: Text.Wrap
     }
     ListView {
         Layout.fillWidth: true
@@ -182,9 +175,10 @@ ColumnLayout {
             height: 60
             background: Rectangle {
                 color: parent.hovered ? Theme.surface : "transparent"
-                radius: 7
+                radius: Theme.radiusSm
             }
             contentItem: RowLayout {
+                spacing: 16
                 Text {
                     Layout.fillWidth: true
                     text: clipName
@@ -201,13 +195,15 @@ ColumnLayout {
                     font.pixelSize: 12
                 }
                 Text {
-                    text: Theme.duration(duration) + "   →"
+                    text: Theme.duration(duration)
                     color: Theme.secondary
                     font.family: Theme.mono
                 }
             }
-            onClicked: if (!missing)
-                appController.selectClip(index)
+            onClicked: if (!missing) {
+                window.editorEditing = false;
+                appController.selectClip(index);
+            }
         }
     }
 }

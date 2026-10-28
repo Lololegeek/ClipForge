@@ -25,7 +25,7 @@ bool ObsEngine::fallbackToSoftware() {
     // OBS is asynchronously destroying the failed encoder can deadlock.
     if (!createOutputs("obs_x264")) {
         releasePipeline();
-        error("Le repli vers l'encodeur logiciel a échoué. Vérifiez le journal et le disque.");
+        error("Impossible de reprendre la capture. Vérifiez l'espace disque, puis relancez le replay.");
         return true; // Failure handled; do not restore a stale Buffering state.
     }
     recording_ = false;
@@ -34,8 +34,8 @@ bool ObsEngine::fallbackToSoftware() {
     emit method(captureMethod_, encoderName_);
     emit state("Buffering");
     emit notice(wasRecording
-                    ? "Passage en H.264 logiciel (CPU). Enregistrement interrompu ; tampon réinitialisé."
-                    : "Passage en H.264 logiciel (CPU). Tampon réinitialisé : les prochains clips utiliseront le CPU.");
+                    ? "La carte graphique a échoué : le processeur prend le relais. Enregistrement interrompu, replay vidé."
+                    : "La carte graphique a échoué : le processeur prend le relais. Replay vidé.");
     return true;
 }
 bool ObsEngine::createOutputs(const QString &id) {

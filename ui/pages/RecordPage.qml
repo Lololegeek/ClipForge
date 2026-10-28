@@ -5,7 +5,7 @@ import "../theme"
 import "../components"
 
 ColumnLayout {
-    spacing: 22
+    spacing: 24
     Text {
         text: "Capture"
         color: Theme.text
@@ -14,36 +14,34 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: "Le replay garde les dernières secondes. Appuie sur F" + (appController.config.saveKey - 111) + " pour en faire un clip."
+        text: "Le replay garde les " + appController.config.replaySeconds + " dernières secondes en mémoire. Appuie sur F" + (appController.config.saveKey - 111) + " pour en faire un clip."
         color: Theme.secondary
         wrapMode: Text.Wrap
     }
     Panel {
         Layout.fillWidth: true
-        Layout.preferredHeight: 240
+        Layout.preferredHeight: 176
         ColumnLayout {
             anchors.fill: parent
-            anchors.margins: 26
-            spacing: 18
+            anchors.margins: 24
+            spacing: 12
             Text {
-                text: appController.captureMethod
+                text: Theme.sourceLabel(appController.config.mode)
                 color: Theme.text
-                font.pixelSize: 21
+                font.pixelSize: 20
+                font.weight: Font.DemiBold
             }
             Text {
-                text: appController.encoder
+                text: appController.config.width + " × " + appController.config.height + " · " + appController.config.fps + " images par seconde · " + appController.config.replaySeconds + " s de replay"
                 color: Theme.secondary
-                font.pixelSize: 14
             }
-            Text {
-                text: appController.config.width + " × " + appController.config.height + " · " + appController.config.fps + " FPS · " + appController.config.codec.toUpperCase() + " · " + appController.config.replaySeconds + " secondes"
-                color: Theme.secondary
-                font.family: Theme.mono
+            Item {
+                Layout.fillHeight: true
             }
             RowLayout {
                 spacing: 12
                 ActionButton {
-                    text: appController.state === "Idle" || appController.state === "Error" ? "Activer le replay" : "Arrêter la capture"
+                    text: appController.state === "Idle" || appController.state === "Error" ? "Activer le replay" : "Mettre en pause"
                     primary: true
                     enabled: appController.engineReady && ["Saving", "Initializing", "Stopping"].indexOf(appController.state) < 0
                     onClicked: appController.state === "Idle" || appController.state === "Error" ? appController.start() : appController.stop()
@@ -57,7 +55,7 @@ ColumnLayout {
         rowSpacing: 20
         Layout.fillWidth: true
         Repeater {
-            model: [["FPS effectifs", Number(appController.metrics.fps || 0).toFixed(2)], ["Images en retard", appController.metrics.lagged || 0], ["Rendu moyen", Number(appController.metrics.frameMs || 0).toFixed(2) + " ms"], ["Dernière sauvegarde", (appController.metrics.saveMs || 0) + " ms"], ["Mémoire du processus", Math.round(appController.metrics.ramMB || 0) + " Mo"], ["CPU (tous les cœurs)", Number(appController.metrics.cpu || 0).toFixed(1) + " %"]]
+            model: [["Images par seconde", Number(appController.metrics.fps || 0).toFixed(1)], ["Images en retard", appController.metrics.lagged || 0], ["Temps par image", Number(appController.metrics.frameMs || 0).toFixed(1) + " ms"], ["Dernière sauvegarde", (appController.metrics.saveMs || 0) + " ms"], ["Mémoire utilisée", Math.round(appController.metrics.ramMB || 0) + " Mo"], ["Processeur", Number(appController.metrics.cpu || 0).toFixed(1) + " %"]]
             delegate: RowLayout {
                 required property var modelData
                 Layout.fillWidth: true
@@ -69,23 +67,16 @@ ColumnLayout {
                 Text {
                     text: modelData[1]
                     color: Theme.text
-                    font.family: Theme.mono
+                    font.weight: Font.DemiBold
                 }
             }
         }
-    }
-    Text {
-        Layout.fillWidth: true
-        text: "La charge GPU et la taille exacte des paquets du tampon ne sont pas exposées ici. La durée affichée indique le temps écoulé, plafonné au réglage ; les images clés et la limite mémoire peuvent réduire la durée sauvegardée."
-        color: Theme.secondary
-        wrapMode: Text.Wrap
-        font.pixelSize: 12
     }
     Item {
         Layout.fillHeight: true
     }
     ActionButton {
-        text: "Configurer la capture"
+        text: "Réglages de capture"
         onClicked: window.page = 5
     }
 }

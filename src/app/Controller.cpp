@@ -102,7 +102,7 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
     });
     connect(engine_, &ObsEngine::notice, this, [this](QString s) {
         notify(s);
-        toast("Encodeur logiciel", s, Overlay::Info);
+        toast("ClipForge", s, Overlay::Info);
     });
     connect(&jobs_, &MediaJobs::failure, this, [this](QString s) { notify(s, true); });
     connect(&library_, &ClipModel::failure, this, [this](QString s) { notify(s, true); });

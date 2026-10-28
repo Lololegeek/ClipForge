@@ -24,7 +24,7 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: "Seuls les exécutables auxquels tu attribues un profil déclenchent la capture automatique. Configure d'abord la source dans Paramètres, puis mémorise le profil ci-dessous."
+        text: "Ajoute un jeu pour que le replay démarre tout seul quand tu le lances. La source réglée dans Paramètres est mémorisée avec le jeu."
         wrapMode: Text.Wrap
         color: Theme.secondary
     }
@@ -38,9 +38,12 @@ ColumnLayout {
         delegate: Rectangle {
             required property var modelData
             width: ListView.view.width
-            height: 92
-            color: Theme.surface
-            radius: 8
+            height: 72
+            color: rowHover.hovered ? Theme.raised : Theme.surface
+            radius: Theme.radiusSm
+            HoverHandler {
+                id: rowHover
+            }
             RowLayout {
                 anchors.fill: parent
                 anchors.margins: 16
@@ -52,27 +55,31 @@ ColumnLayout {
                         text: modelData.title
                         color: Theme.text
                         font.pixelSize: 15
+                        font.weight: Font.DemiBold
                         elide: Text.ElideRight
                     }
                     Text {
                         Layout.fillWidth: true
                         text: modelData.executable
                         color: Theme.secondary
-                        font.pixelSize: 11
+                        font.pixelSize: 12
                         elide: Text.ElideMiddle
                     }
                 }
                 ActionButton {
-                    text: appController.config.profiles[modelData.executable.toLowerCase()] ? "Retirer le profil" : "Mémoriser ce profil"
+                    primary: !appController.config.profiles[modelData.executable.toLowerCase()]
+                    text: appController.config.profiles[modelData.executable.toLowerCase()] ? "Retirer" : "Ajouter"
                     onClicked: appController.config.profiles[modelData.executable.toLowerCase()] ? appController.removeProfile(modelData.executable) : appController.saveProfile(modelData.executable, modelData.title)
                 }
             }
         }
     }
     Text {
-        text: "La présence d'une fenêtre ne garantit pas sa compatibilité avec la capture."
+        visible: appController.games.length === 0
+        Layout.fillWidth: true
+        text: "Aucun jeu ouvert. Lance ton jeu, puis clique sur Actualiser."
         color: Theme.secondary
-        font.pixelSize: 12
+        wrapMode: Text.Wrap
     }
     Component.onCompleted: appController.refreshWindows()
 }

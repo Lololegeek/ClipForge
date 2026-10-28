@@ -8,6 +8,7 @@ QtObject {
     readonly property color raised: "#292c3c"
     readonly property color line: "#36394d"
     readonly property color accent: "#8c8cff"
+    readonly property color accentHover: "#a3a3ff"
     readonly property color accentSurface: "#30304c"
     readonly property color text: "#f0f1fa"
     readonly property color secondary: "#b0b3c8"
@@ -15,7 +16,12 @@ QtObject {
     readonly property color danger: "#ffadb5"
     readonly property string font: "Segoe UI"
     readonly property string mono: "Consolas"
-    readonly property int radius: 10
+    readonly property int radius: 12
+    readonly property int radiusSm: 8
+    // Plain-language label for a capture mode stored in the config.
+    function sourceLabel(mode) {
+        return ({ "display": "Écran entier", "window": "Fenêtre", "game": "Jeu" })[mode] || "Écran entier";
+    }
 
     // 75 -> "1:15", 3725 -> "1:02:05"; tenths optional for editor timecodes.
     function duration(seconds, tenths) {

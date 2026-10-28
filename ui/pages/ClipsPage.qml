@@ -301,8 +301,10 @@ ColumnLayout {
                 onTapped: {
                     if (page.selecting)
                         page.togglePick(clipId);
-                    else if (!missing)
+                    else if (!missing) {
+                        window.editorEditing = false;
                         appController.selectClip(index);
+                    }
                 }
             }
             Rectangle {

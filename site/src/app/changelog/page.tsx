@@ -10,6 +10,18 @@ export const metadata: Metadata = {
 
 const releases = [
   {
+    version: "0.9.0",
+    date: "28 octobre 2026",
+    summary: "Une interface plus nette, et un mode pour simplement regarder ses clips.",
+    changes: [
+      "Éditeur : nouveau mode « Regarder » où la vidéo prend toute la place, sans les outils de montage.",
+      "Plein écran pour les clips (touche F, double-clic ou bouton, Échap pour sortir).",
+      "Interface rafraîchie : textes plus clairs, sans jargon technique, et boutons plus doux.",
+      "Messages d’erreur réécrits pour dire ce qui se passe et quoi faire.",
+    ],
+    url: "https://github.com/Lololegeek/ClipForge/releases/tag/v0.9.0",
+  },
+  {
     version: "0.8.0",
     date: "28 octobre 2026",
     summary: "Marqueurs, pistes audio séparées, recadrage, presets d’export et une bibliothèque qui se range toute seule.",
