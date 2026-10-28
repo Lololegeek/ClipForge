@@ -1,7 +1,9 @@
 import "@fontsource-variable/jetbrains-mono";
 import "@fontsource-variable/schibsted-grotesk";
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
+import { UMAMI_URL, UMAMI_WEBSITE_ID } from "@/lib/analytics";
 import { Providers } from "@/components/providers";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -36,6 +38,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main id="contenu">{children}</main>
           <SiteFooter />
         </Providers>
+        {UMAMI_WEBSITE_ID && (
+          <>
+            <Script
+              src={`${UMAMI_URL}/script.js`}
+              data-website-id={UMAMI_WEBSITE_ID}
+              strategy="afterInteractive"
+            />
+            {/* Relectures de session et heatmaps (échantillonnage réglé dans Umami). */}
+            <Script
+              src={`${UMAMI_URL}/recorder.js`}
+              data-website-id={UMAMI_WEBSITE_ID}
+              strategy="lazyOnload"
+            />
+          </>
+        )}
       </body>
     </html>
   );

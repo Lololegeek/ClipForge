@@ -9,6 +9,7 @@ import { CodeBlock } from "@/components/code-block";
 import { Github, Windows } from "@/components/icons";
 import { Section, SectionTitle } from "@/components/sections";
 import { Button } from "@/components/ui/button";
+import { getSponsor, track } from "@/lib/analytics";
 import { formatBytes } from "@/lib/format";
 import { fetchLatestRelease, pickInstaller, RELEASE_SNAPSHOT } from "@/lib/github";
 import { BUILD_COMMANDS, DOCS_URL, RELEASES_URL, REPO_URL, ZIP_URL } from "@/lib/site";
@@ -43,13 +44,24 @@ export function DownloadPanel() {
                 <a
                   href={installer?.browser_download_url ?? data.html_url}
                   {...(installer ? {} : { target: "_blank", rel: "noopener noreferrer" })}
+                  onClick={() =>
+                    track(installer ? "telechargement" : "versions-github", {
+                      sponsor: getSponsor(),
+                      version: data.tag_name,
+                    })
+                  }
                 >
                   {installer ? <Download /> : <Windows />}{" "}
                   {installer ? `Télécharger ${data.tag_name}` : `Voir la version ${data.tag_name}`}
                 </a>
               </Button>
               <Button asChild variant="secondary" size="lg">
-                <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={RELEASES_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => track("versions-github", { sponsor: getSponsor() })}
+                >
                   Toutes les versions
                 </a>
               </Button>
