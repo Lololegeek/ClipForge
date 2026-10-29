@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     "ClipForge garde les dernières secondes de ton jeu en mémoire. Appuie sur F8, le moment est sauvegardé. Hors ligne, sans compte, open source.",
   applicationName: "ClipForge",
   keywords: ["replay", "clips", "capture", "Windows", "OBS", "open source", "gaming"],
+  verification: { google: "l9HqPO6qKN2gCfzcXpV-ZpkAOFiZaJDOqipo5eoXEyQ" },
 };
 
 export const viewport: Viewport = {
