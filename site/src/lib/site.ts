@@ -3,6 +3,7 @@ export const REPO_URL = `https://github.com/${REPO}`;
 export const RELEASES_URL = `${REPO_URL}/releases/latest`;
 export const ZIP_URL = `${REPO_URL}/archive/refs/heads/main.zip`;
 export const DOCS_URL = (file: string) => `${REPO_URL}/blob/main/${file}`;
+export const DISCORD_URL = "https://discord.gg/asj8TNXG4F";
 
 export const BUILD_COMMANDS = `git clone ${REPO_URL}
 cd ClipForge

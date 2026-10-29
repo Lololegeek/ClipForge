@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { DOCS_URL, REPO_URL } from "@/lib/site";
+import { DISCORD_URL, DOCS_URL, REPO_URL } from "@/lib/site";
 
 export function SiteFooter() {
   return (
@@ -14,6 +14,9 @@ export function SiteFooter() {
         <nav aria-label="Pied de page" className="flex flex-wrap gap-x-6 gap-y-2">
           <a className="hover:text-ink" href={REPO_URL} target="_blank" rel="noopener noreferrer">
             GitHub
+          </a>
+          <a className="hover:text-ink" href={DISCORD_URL} target="_blank" rel="noopener noreferrer">
+            Discord
           </a>
           <Link className="hover:text-ink" href="/fonctionnalites/">
             Fonctionnalités

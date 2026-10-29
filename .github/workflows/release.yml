@@ -77,3 +77,11 @@ jobs:
         run: |
           gh release create "${{ github.ref_name }}" dist/ClipForge-Setup-x64.exe dist/ClipForge-Windows-x64.zip dist/SHA256SUMS.txt `
             --title "ClipForge ${{ github.ref_name }}" --generate-notes
+
+  discord:
+    needs: windows
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/discord-release.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit

@@ -1,0 +1,36 @@
+name: Discord release
+
+# Appelé par release.yml : une release créée avec github.token ne déclenche pas `release: published`.
+on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag de la release à annoncer
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post to Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then echo "DISCORD_WEBHOOK absent, rien à envoyer."; exit 0; fi
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json tagName,name,url,body |
+            jq '{
+              username: "ClipForge Releases",
+              content: "🚀 **ClipForge \(.tagName)** est disponible !",
+              embeds: [{ title: (.name // .tagName), url: .url, description: (.body // "")[:3500], color: 7506394 }]
+            }' > payload.json
+          curl -fsS -H "Content-Type: application/json" --data-binary @payload.json "$WEBHOOK"

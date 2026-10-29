@@ -3,6 +3,8 @@ export const UMAMI_URL = "https://unami.assetflow-website.com";
 export const UMAMI_WEBSITE_ID = "11764eaa-74c1-4c14-8cfb-fa9000d0b452";
 
 const SOURCE_KEY = "cf-sponsor";
+/** Au-delà, un téléchargement ne compte plus pour le sponsor. */
+const SOURCE_MAX_AGE = 24 * 60 * 60 * 1000;
 
 type Umami = { track: (event: string, data?: Record<string, string>) => Promise<unknown> };
 declare global {
@@ -11,10 +13,11 @@ declare global {
   }
 }
 
-/** Le sponsor par lequel le visiteur est arrivé, gardé jusqu'au prochain lien sponso. */
+/** Le sponsor par lequel le visiteur est arrivé il y a moins d'un jour, sinon "direct". */
 export function getSponsor(): string {
   try {
-    return localStorage.getItem(SOURCE_KEY) ?? "direct";
+    const { slug, at } = JSON.parse(localStorage.getItem(SOURCE_KEY) ?? "null") ?? {};
+    return typeof slug === "string" && Date.now() - at < SOURCE_MAX_AGE ? slug : "direct";
   } catch {
     return "direct";
   }
@@ -22,7 +25,14 @@ export function getSponsor(): string {
 
 export function setSponsor(slug: string) {
   try {
-    localStorage.setItem(SOURCE_KEY, slug);
+    localStorage.setItem(SOURCE_KEY, JSON.stringify({ slug, at: Date.now() }));
+  } catch {}
+}
+
+/** Un sponsor ne compte qu'un téléchargement par visiteur. */
+export function clearSponsor() {
+  try {
+    localStorage.removeItem(SOURCE_KEY);
   } catch {}
 }
 

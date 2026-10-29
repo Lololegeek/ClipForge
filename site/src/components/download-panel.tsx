@@ -9,7 +9,7 @@ import { CodeBlock } from "@/components/code-block";
 import { Github, Windows } from "@/components/icons";
 import { Section, SectionTitle } from "@/components/sections";
 import { Button } from "@/components/ui/button";
-import { getSponsor, track } from "@/lib/analytics";
+import { clearSponsor, getSponsor, track } from "@/lib/analytics";
 import { formatBytes } from "@/lib/format";
 import { fetchLatestRelease, pickInstaller, RELEASE_SNAPSHOT } from "@/lib/github";
 import { BUILD_COMMANDS, DOCS_URL, RELEASES_URL, REPO_URL, ZIP_URL } from "@/lib/site";
@@ -44,12 +44,13 @@ export function DownloadPanel() {
                 <a
                   href={installer?.browser_download_url ?? data.html_url}
                   {...(installer ? {} : { target: "_blank", rel: "noopener noreferrer" })}
-                  onClick={() =>
+                  onClick={() => {
                     track(installer ? "telechargement" : "versions-github", {
                       sponsor: getSponsor(),
                       version: data.tag_name,
-                    })
-                  }
+                    });
+                    if (installer) clearSponsor();
+                  }}
                 >
                   {installer ? <Download /> : <Windows />}{" "}
                   {installer ? `Télécharger ${data.tag_name}` : `Voir la version ${data.tag_name}`}

@@ -7,10 +7,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { CommandMenu } from "@/components/command-menu";
+import { Discord } from "@/components/icons";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
-import { SECTIONS } from "@/lib/site";
+import { DISCORD_URL, SECTIONS } from "@/lib/site";
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -67,6 +68,11 @@ export function SiteHeader() {
 
         <div className="ml-auto flex items-center gap-2 md:ml-2">
           <CommandMenu />
+          <Button asChild variant="ghost" size="sm" className="size-9 px-0">
+            <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer" aria-label="Discord ClipForge">
+              <Discord />
+            </a>
+          </Button>
           <ThemeToggle />
           <Button asChild variant="primary" size="sm" className="hidden sm:inline-flex">
             <Link href="/telechargement/">Télécharger</Link>
@@ -131,6 +137,14 @@ export function SiteHeader() {
                 >
                   Licences
                 </Link>
+                <a
+                  href={DISCORD_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-ink hover:bg-raised rounded-lg px-3 py-3 text-lg"
+                >
+                  Discord
+                </a>
               </Dialog.Content>
             </Dialog.Portal>
           </Dialog.Root>
