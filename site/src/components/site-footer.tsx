@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { DISCORD_URL, DOCS_URL, REPO_URL } from "@/lib/site";
+import { DISCORD_URL, DOCS_URL, REPO_URL, YOUTUBE_URL } from "@/lib/site";
 
 export function SiteFooter() {
   return (
@@ -17,6 +17,9 @@ export function SiteFooter() {
           </a>
           <a className="hover:text-ink" href={DISCORD_URL} target="_blank" rel="noopener noreferrer">
             Discord
+          </a>
+          <a className="hover:text-ink" href={YOUTUBE_URL} target="_blank" rel="noopener noreferrer">
+            YouTube
           </a>
           <Link className="hover:text-ink" href="/fonctionnalites/">
             Fonctionnalités

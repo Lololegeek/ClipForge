@@ -71,3 +71,5 @@ Desktop.ini
 
 # Local browser validation
 /.playwright-cli/
+
+video-agent/.env

@@ -7,11 +7,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { CommandMenu } from "@/components/command-menu";
-import { Discord } from "@/components/icons";
+import { Discord, Youtube } from "@/components/icons";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
-import { DISCORD_URL, SECTIONS } from "@/lib/site";
+import { DISCORD_URL, SECTIONS, YOUTUBE_URL } from "@/lib/site";
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -71,6 +71,11 @@ export function SiteHeader() {
           <Button asChild variant="ghost" size="sm" className="size-9 px-0">
             <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer" aria-label="Discord ClipForge">
               <Discord />
+            </a>
+          </Button>
+          <Button asChild variant="ghost" size="sm" className="size-9 px-0">
+            <a href={YOUTUBE_URL} target="_blank" rel="noopener noreferrer" aria-label="Chaîne YouTube ClipForge">
+              <Youtube />
             </a>
           </Button>
           <ThemeToggle />
@@ -144,6 +149,14 @@ export function SiteHeader() {
                   className="text-ink hover:bg-raised rounded-lg px-3 py-3 text-lg"
                 >
                   Discord
+                </a>
+                <a
+                  href={YOUTUBE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-ink hover:bg-raised rounded-lg px-3 py-3 text-lg"
+                >
+                  YouTube
                 </a>
               </Dialog.Content>
             </Dialog.Portal>
