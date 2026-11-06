@@ -59,14 +59,24 @@ void ObsEngine::start(Settings s) {
         return;
     }
     auto data = obs_data_create();
-    obs_data_set_bool(data, "capture_cursor", true);
+    obs_data_set_bool(data, "capture_cursor", s.captureCursor);
     const char *type = s.mode == "display"  ? "monitor_capture"
                        : s.mode == "window" ? "window_capture"
                                             : "game_capture";
     if (s.mode == "display") {
         obs_data_set_string(data, "monitor_id", s.target.toUtf8().constData());
-        obs_data_set_int(data, "method", 1);
-        captureMethod_ = "Écran · DXGI";
+        // DXGI duplication returns black frames (cursor only) when the screen is driven by another GPU than the
+        // one OBS renders on, or while a game runs fullscreen; Windows Graphics Capture has neither limit.
+        bool wgc = true;
+        if (auto props = obs_get_source_properties(obs_get_latest_input_type_id("monitor_capture"))) {
+            if (auto methods = obs_properties_get(props, "method"))
+                for (size_t i = 0; i < obs_property_list_item_count(methods); ++i)
+                    if (obs_property_list_item_int(methods, i) == 2)
+                        wgc = !obs_property_list_item_disabled(methods, i);
+            obs_properties_destroy(props);
+        }
+        obs_data_set_int(data, "method", wgc ? 2 : 1);
+        captureMethod_ = wgc ? "Écran · Windows Graphics Capture" : "Écran · DXGI (repli WGC indisponible)";
     } else {
         obs_data_set_string(data, "window", s.target.toUtf8().constData());
         obs_data_set_int(data, "priority", 1);

@@ -5,6 +5,8 @@
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QDir>
+#include <QFont>
+#include <QFontMetrics>
 #include <QFile>
 #include <QFileDialog>
 #include <QImage>
@@ -99,6 +101,7 @@ void Controller::exportClip(QVariantMap o) {
     options.crf = o.value("crf", 20).toInt();
     options.maxMB = o.value("maxMB", 0).toDouble();
     options.vertical = o.value("vertical", false).toBool();
+    options.normalize = o.value("normalize", false).toBool();
     const QString ext = options.format == "mp4" ? "mp4" : options.format;
     const QString label = ext == "gif" ? "GIF animé (*.gif)" : ext == "webp" ? "WebP animé (*.webp)" : "MP4 (*.mp4)";
     auto dest = QFileDialog::getSaveFileName(
@@ -109,6 +112,39 @@ void Controller::exportClip(QVariantMap o) {
         return;
     if (!dest.endsWith("." + ext, Qt::CaseInsensitive))
         dest += "." + ext;
+    exportGame_ = library_.gameOf(project_.source); // the export belongs to the clip's game, not the running one
+    if (o.value("watermark", false).toBool()) {
+        // "Clipped with ClipForge" badge, drawn once for a 1080p frame and scaled by ffmpeg.
+        const int h = 96, pad = 14, logo = h - 2 * pad;
+        QFont small("Segoe UI", 1), big("Segoe UI", 1);
+        small.setPixelSize(22);
+        big.setPixelSize(36);
+        big.setBold(true);
+        const int textW = std::max(QFontMetrics(small).horizontalAdvance("Clipped with"),
+                                   QFontMetrics(big).horizontalAdvance("ClipForge"));
+        QImage badge(pad * 3 + logo + textW, h, QImage::Format_ARGB32_Premultiplied);
+        badge.fill(Qt::transparent);
+        QPainter g(&badge);
+        g.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing);
+        g.setPen(Qt::NoPen);
+        g.setBrush(QColor(12, 14, 20, 175));
+        g.drawRoundedRect(badge.rect(), h / 2.0, h / 2.0);
+        QImage mark(":/assets/branding/clipforge-logo-rond.png");
+        if (!mark.isNull())
+            g.drawImage(QRect(pad, pad, logo, logo), mark);
+        g.setPen(QColor(255, 255, 255, 190));
+        g.setFont(small);
+        g.drawText(QRect(pad * 2 + logo, 12, textW, 28), Qt::AlignLeft | Qt::AlignVCenter, "Clipped with");
+        g.setPen(Qt::white);
+        g.setFont(big);
+        g.drawText(QRect(pad * 2 + logo, 38, textW, 46), Qt::AlignLeft | Qt::AlignVCenter, "ClipForge");
+        g.end();
+        const QString path = QDir::tempPath() + "/clipforge-watermark.png";
+        if (badge.save(path, "PNG")) {
+            options.watermark = path;
+            options.watermarkCorner = std::clamp(o.value("watermarkCorner", 3).toInt(), 0, 3);
+        }
+    }
     auto project = project_;
     project.volume = o.value("volume", 1.0).toDouble();
     project.gameVolume = o.value("gameVolume", 1.0).toDouble();

@@ -1,0 +1,2 @@
+ASSET_NAME: gaming-replay-banner-background
+IMAGE_PATH: C:\Users\Loévan\.codex\generated_images\01a18815-d8f0-7451-a2cc-2ba8f3079d4a\exec-16e18246-af5c-478e-a248-8a8e561a96ad.png

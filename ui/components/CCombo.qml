@@ -24,12 +24,28 @@ ComboBox {
         border.width: control.activeFocus ? 2 : 1
         opacity: control.enabled ? 1 : 0.5
     }
-    indicator: Text {
+    indicator: Canvas {
         x: control.width - width - 12
-        anchors.verticalCenter: parent.verticalCenter
-        text: "⌄"
-        font.pixelSize: 20
-        color: Theme.secondary
+        y: (control.height - height) / 2
+        width: 12
+        height: 8
+        rotation: control.popup.visible ? 180 : 0
+        Behavior on rotation { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+        property color tone: control.hovered || control.popup.visible ? Theme.text : Theme.secondary
+        onToneChanged: requestPaint()
+        onPaint: {
+            const c = getContext("2d");
+            c.reset();
+            c.strokeStyle = tone;
+            c.lineWidth = 2;
+            c.lineCap = "round";
+            c.lineJoin = "round";
+            c.beginPath();
+            c.moveTo(1.5, 1.5);
+            c.lineTo(6, 6);
+            c.lineTo(10.5, 1.5);
+            c.stroke();
+        }
     }
     delegate: ItemDelegate {
         required property int index
@@ -41,7 +57,7 @@ ComboBox {
         highlighted: control.highlightedIndex === index
         contentItem: Text {
             text: parent.text
-            color: parent.enabled ? Theme.text : Theme.secondary
+            color: !parent.enabled ? Theme.secondary : (control.currentIndex === parent.index ? Theme.accentHover : Theme.text)
             font: control.font
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight

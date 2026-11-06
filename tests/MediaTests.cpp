@@ -129,6 +129,26 @@ class MediaTests : public QObject {
         QVERIFY2(std::abs(d - 3) < 0.2, qPrintable(QString::number(d)));
         QVERIFY(!jobs.exportVideo(project, output_, {.height = 720, .fps = 30}));
     }
+    void watermarkExport() {
+        const QString badge = qEnvironmentVariable("CLIPFORGE_TEST_WATERMARK");
+        QVERIFY2(QFileInfo::exists(badge), "CLIPFORGE_TEST_WATERMARK must point to a PNG");
+        const QString out = output_ + ".watermark.mp4";
+        QFile::remove(out);
+        cf::EditProject project;
+        project.source = source_;
+        project.segments = {{1, 2, 1}};
+        project.hasAudio = qEnvironmentVariableIntValue("CLIPFORGE_TEST_NO_AUDIO") == 0;
+        cf::MediaJobs jobs(tools_, QFileInfo(output_).absolutePath() + "/thumb");
+        QSignalSpy done(&jobs, &cf::MediaJobs::exported), errors(&jobs, &cf::MediaJobs::failure);
+        cf::ExportOptions o{.height = 720, .fps = 30};
+        o.watermark = badge;
+        QVERIFY(jobs.exportVideo(project, out, o));
+        QTRY_VERIFY_WITH_TIMEOUT(done.count() + errors.count() > 0, 45000);
+        if (errors.count())
+            qWarning() << errors.first();
+        QCOMPARE(errors.count(), 0);
+        QCOMPARE(done.count(), 1);
+    }
 };
 int main(int argc, char **argv) {
     QGuiApplication app(argc, argv);

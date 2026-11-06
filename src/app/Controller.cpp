@@ -67,6 +67,7 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
             setMicMuted(settings_.pushToTalk || (micMuted_ && settings_.micKey));
         else if (s == "Error")
             scheduleReplayRetry();
+        updateTrayState();
         emit changed();
         if (restartPending_ && (s == "Idle" || s == "Error")) {
             restartPending_ = false;
@@ -109,7 +110,8 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
     connect(engine_, &ObsEngine::saved, this, &Controller::clipSaved);
     connect(&jobs_, &MediaJobs::trimmed, this, [this](QString p) {
         lastClip_ = p;
-        jobs_.import(p, game_, true);
+        const QString g = clipGames_.take(p);
+        jobs_.import(p, g.isEmpty() ? game_ : g, true);
         emit changed();
     });
     connect(&jobs_, &MediaJobs::imported, this, &Controller::clipImported);
@@ -120,7 +122,7 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
     pttTimer_.setInterval(40);
     connect(&pttTimer_, &QTimer::timeout, this, [this] {
         // RegisterHotKey only reports the press; the release is polled while the key is held.
-        if (!(GetAsyncKeyState(settings_.micKey) & 0x8000)) {
+        if (!(GetAsyncKeyState(hotkey::vk(settings_.micKey)) & 0x8000)) {
             pttTimer_.stop();
             setMicMuted(true);
         }
@@ -134,7 +136,7 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
     connect(&jobs_, &MediaJobs::exported, this, [this](QString p) {
         lastExport_ = p;
         if (p.endsWith(".mp4", Qt::CaseInsensitive))
-            jobs_.import(p, game_);
+            jobs_.import(p, exportGame_);
         notify("Export terminé : " + QFileInfo(p).fileName());
     });
     const auto cli = QCoreApplication::arguments();
@@ -165,6 +167,10 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
         detection_.setInterval(2500);
         connect(&detection_, &QTimer::timeout, this, &Controller::detect);
         detection_.start();
+        // Watch folder: videos dropped into the clips folder by other tools appear without a restart.
+        watchTimer_.setInterval(20000);
+        connect(&watchTimer_, &QTimer::timeout, this, &Controller::scan);
+        watchTimer_.start();
         QTimer::singleShot(0, this, &Controller::scan);
     }
     worker_.setObjectName("Capture OBS");
@@ -182,7 +188,7 @@ Controller::~Controller() {
 void Controller::connectTray() {
     tray_ = new QSystemTrayIcon(this);
     tray_->setIcon(QApplication::windowIcon());
-    tray_->setToolTip(QString("ClipForge · F%1 pour sauvegarder").arg(settings_.saveKey - 111));
+    tray_->setToolTip(QString("ClipForge · %1 pour sauvegarder").arg(hotkey::name(settings_.saveKey)));
     auto menu = new QMenu;
     menu->addAction("Ouvrir ClipForge", this, &Controller::showWindow);
     menu->addAction("Sauvegarder le replay", this, &Controller::saveReplay);
@@ -198,6 +204,7 @@ void Controller::connectTray() {
     });
     connect(tray_, &QObject::destroyed, menu, &QObject::deleteLater);
     tray_->show();
+    updateTrayState();
 }
 void Controller::scheduleReplayRetry() {
     // The replay must come back by itself after a transient failure (GPU reset, busy encoder), a few times at most.
@@ -234,5 +241,30 @@ void Controller::notify(QString s, bool error) {
         tray_->showMessage("ClipForge", s, error ? QSystemTrayIcon::Warning : QSystemTrayIcon::Information,
                            3500);
     emit changed();
+}
+} // namespace cf
+
+namespace cf {
+// Tray icon with a small status dot: green while the replay buffer runs, red while recording.
+void Controller::updateTrayState() {
+    if (!tray_)
+        return;
+    const bool buffering = state_ == "Buffering", rec = state_ == "Recording";
+    QIcon icon = QApplication::windowIcon();
+    if (buffering || rec) {
+        QPixmap px = icon.pixmap(64, 64);
+        if (!px.isNull()) {
+            QPainter g(&px);
+            g.setRenderHint(QPainter::Antialiasing);
+            g.setPen(QPen(QColor(20, 21, 30), 4));
+            g.setBrush(rec ? QColor("#ff5c6c") : QColor("#4ade80"));
+            g.drawEllipse(QRectF(38, 38, 22, 22));
+            g.end();
+            icon = QIcon(px);
+        }
+    }
+    tray_->setIcon(icon);
+    const QString status = rec ? "enregistrement" : buffering ? "replay actif" : "replay arrêté";
+    tray_->setToolTip(QString("ClipForge · %1 · %2 pour sauvegarder").arg(status, hotkey::name(settings_.saveKey)));
 }
 } // namespace cf

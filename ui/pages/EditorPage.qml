@@ -6,9 +6,20 @@ import ClipForge.Playback 1.0
 import "../theme"
 import "../components"
 
+Flickable {
+    id: scroller
+    contentWidth: width
+    contentHeight: Math.max(height, editor.implicitHeight)
+    clip: true
+    boundsBehavior: Flickable.StopAtBounds
+    ScrollBar.vertical: ScrollBar {
+        policy: scroller.contentHeight > scroller.height + 1 ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
+    }
 ColumnLayout {
     id: editor
-    spacing: 14
+    width: scroller.width - (scroller.contentHeight > scroller.height + 1 ? 14 : 0)
+    height: scroller.contentHeight
+    spacing: 16
     readonly property bool hasClip: !!appController.selected.path
     readonly property var speeds: [0.25, 0.5, 1, 2, 4]
     readonly property real clipLength: Math.max(0, Number(appController.selected.duration || player.duration / 1000))
@@ -50,6 +61,12 @@ ColumnLayout {
         for (var k in p)
             if (k !== "name")
                 o[k] = p[k];
+        return o;
+    }
+    function withWatermark(o) {
+        o.watermark = watermarkBox.checked;
+        o.watermarkCorner = watermarkCorner.currentIndex;
+        o.normalize = normalizeBox.checked;
         return o;
     }
     function nextMarker(forward) {
@@ -102,6 +119,22 @@ ColumnLayout {
         outPoint = Math.max(player.position / 1000, inPoint + 0.1);
     }
 
+    // Switching to or from fullscreen recreates the render surface; a paused video then stays black
+    // until a new frame arrives, so re-seek to the current position to push one.
+    Connections {
+        target: window
+        function onImmersiveChanged() {
+            redraw.restart();
+        }
+    }
+    Timer {
+        id: redraw
+        interval: 250
+        onTriggered: {
+            if (editor.hasClip && player.playbackState !== MediaPlayer.PlayingState)
+                playback.seek(player.position);
+        }
+    }
     Shortcut {
         sequence: "Space"
         enabled: editor.hasClip
@@ -299,7 +332,8 @@ ColumnLayout {
     Rectangle {
         Layout.fillWidth: true
         Layout.fillHeight: true
-        Layout.minimumHeight: 150
+        Layout.minimumHeight: window.immersive ? 150 : 300
+        Layout.preferredHeight: window.immersive ? -1 : Math.max(300, scroller.height * 0.64)
         color: window.immersive ? "#000000" : "#07080d"
         radius: window.immersive ? 0 : Theme.radiusSm
         // The library thumbnail shows instantly while the decoder opens the file.
@@ -519,7 +553,7 @@ ColumnLayout {
             text: Theme.duration(player.position / 1000, true) + " / " + Theme.duration(player.duration / 1000, true)
             color: Theme.text
             font.family: Theme.mono
-            Layout.preferredWidth: 150
+            Layout.preferredWidth: 130
             horizontalAlignment: Text.AlignHCenter
         }
         CSlider {
@@ -553,12 +587,12 @@ ColumnLayout {
             Layout.preferredWidth: 90
         }
         ActionButton {
-            text: "Capturer l'image"
+            text: "Capturer"
             enabled: editor.hasClip
             onClicked: appController.captureFrame(player.position / 1000)
         }
         ActionButton {
-            text: window.immersive ? "Quitter le plein écran" : "Plein écran"
+            text: window.immersive ? "Quitter" : "Plein écran"
             enabled: editor.hasClip
             onClicked: window.setImmersive(!window.immersive)
         }
@@ -874,16 +908,46 @@ ColumnLayout {
         Item {
             Layout.fillWidth: true
         }
+    }
+    RowLayout {
+        visible: editor.tools
+        Layout.fillWidth: true
+        spacing: 14
+        CCheck {
+            id: normalizeBox
+            text: "Égaliser le volume"
+            checked: false
+        }
+        CCheck {
+            id: watermarkBox
+            text: "Watermark"
+            checked: false
+        }
+        CCombo {
+            id: watermarkCorner
+            visible: watermarkBox.checked
+            implicitWidth: 140
+            model: ["Haut gauche", "Haut droite", "Bas gauche", "Bas droite"]
+            currentIndex: 3
+        }
+        Item {
+            Layout.fillWidth: true
+        }
         ActionButton {
             visible: !appController.exportBusy && appController.lastExport.length > 0
             text: "Afficher l'export"
             onClicked: appController.reveal(appController.lastExport)
         }
         ActionButton {
+            visible: appController.exportBusy
+            text: "Annuler l'export"
+            onClicked: appController.cancelExport()
+        }
+        ActionButton {
             text: appController.exportBusy ? "Export " + Math.round(appController.exportProgress * 100) + " %" : "Exporter en " + ({ gif: "GIF", webp: "WebP" }[editor.presets[preset.currentIndex].format] || "MP4")
             primary: true
             enabled: !appController.exportBusy && appController.segments.length > 0
-            onClicked: appController.exportClip(editor.exportOptions())
+            onClicked: appController.exportClip(editor.withWatermark(editor.exportOptions()))
         }
     }
     Rectangle {
@@ -915,4 +979,5 @@ ColumnLayout {
         player.stop();
         window.setImmersive(false);
     }
+}
 }

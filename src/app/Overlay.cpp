@@ -5,6 +5,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QScreen>
+#include <windows.h>
 namespace cf {
 namespace {
 QColor accent(Overlay::Kind k) {
@@ -26,6 +27,8 @@ Overlay::Overlay(QWidget *parent) : QWidget(parent), fade_(this, "windowOpacity"
     setAttribute(Qt::WA_TransparentForMouseEvents);
     setFocusPolicy(Qt::NoFocus);
     setFixedSize(380, 76);
+    // Never let the toast end up inside a screen capture (ignored silently on Windows older than 10 2004).
+    SetWindowDisplayAffinity(reinterpret_cast<HWND>(winId()), 0x11 /* WDA_EXCLUDEFROMCAPTURE */);
     hide_.setSingleShot(true);
     connect(&hide_, &QTimer::timeout, this, &Overlay::dismiss);
     spin_.setInterval(33);
@@ -44,16 +47,19 @@ void Overlay::place() {
     if (!screen)
         return;
     auto r = screen->geometry();
-    move(r.center().x() - width() / 2, r.top() + 48);
+    move(r.left() + 24, r.top() + 24); // top-left, like Medal
 }
 void Overlay::show(const QString &title, const QString &subtitle, Kind kind) {
     title_ = title;
     subtitle_ = subtitle;
     kind_ = kind;
     clock_.restart();
+    // Extra subtitle lines (e.g. the hotkey reminder) make the toast taller.
+    const int lines = subtitle.isEmpty() ? 0 : int(subtitle.count(QChar(10))) + 1;
+    setFixedSize(380, lines > 1 ? 52 + lines * 20 : 76);
     place();
     // A pending "in progress" toast can wait for its result; anything else disappears after three seconds.
-    hide_.start(kind == Progress ? 10000 : 3000);
+    hide_.start(kind == Progress ? 10000 : lines > 1 ? 7000 : 3000);
     if (kind == Progress)
         spin_.start();
     else
@@ -118,7 +124,7 @@ void Overlay::paintEvent(QPaintEvent *) {
     QFontMetrics fm(f);
     if (subtitle_.isEmpty()) {
         p.drawText(textArea, Qt::AlignVCenter | Qt::AlignLeft, fm.elidedText(title_, Qt::ElideRight, textArea.width()));
-    } else {
+    } else if (!subtitle_.contains(QChar(10))) {
         p.drawText(textArea.adjusted(0, 0, 0, -height() / 2 + 2), Qt::AlignBottom | Qt::AlignLeft,
                    fm.elidedText(title_, Qt::ElideRight, textArea.width()));
         f.setPixelSize(13);
@@ -128,6 +134,20 @@ void Overlay::paintEvent(QPaintEvent *) {
         QFontMetrics sm(f);
         p.drawText(textArea.adjusted(0, height() / 2 + 2, 0, 0), Qt::AlignTop | Qt::AlignLeft,
                    sm.elidedText(subtitle_, Qt::ElideMiddle, textArea.width()));
+    } else {
+        p.drawText(QRect(textArea.left(), 12, textArea.width(), 24), Qt::AlignVCenter | Qt::AlignLeft,
+                   fm.elidedText(title_, Qt::ElideRight, textArea.width()));
+        f.setPixelSize(13);
+        f.setWeight(QFont::Normal);
+        p.setFont(f);
+        p.setPen(QColor("#b0b3c8"));
+        QFontMetrics sm(f);
+        int y = 42;
+        for (const auto &line : subtitle_.split(QChar(10))) {
+            p.drawText(QRect(textArea.left(), y, textArea.width(), 20), Qt::AlignVCenter | Qt::AlignLeft,
+                       sm.elidedText(line, Qt::ElideRight, textArea.width()));
+            y += 20;
+        }
     }
 }
 } // namespace cf

@@ -10,8 +10,13 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QMenu>
+#include <QHttpMultiPart>
+#include <QMimeData>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include <QPainter>
 #include <QProcess>
+#include <QSet>
 #include <QScreen>
 #include <QStorageInfo>
 #include <QSystemTrayIcon>
@@ -19,12 +24,17 @@
 #include <QUrl>
 namespace cf {
 void Controller::scan() {
+    if (jobs_.pendingImports() > 0)
+        return; // an earlier scan is still importing
     QDir dir(settings_.clips);
     auto entries = dir.entryInfoList({"*.mp4", "*.mkv", "*.mov", "*.webm"}, QDir::Files, QDir::Time);
     // Unchanged clips that already have a thumbnail are not probed again on every launch.
     auto known = library_.knownFiles();
     QFileInfoList fresh;
+    const auto now = QDateTime::currentDateTime();
     for (const auto &f : entries) {
+        if (f.lastModified().secsTo(now) < 6) // still being written
+            continue;
         auto it = known.constFind(f.absoluteFilePath());
         if (it == known.cend() || it.value() != f.size())
             fresh << f;
@@ -65,12 +75,45 @@ void Controller::refreshWindows() {
         targets << QVariantMap{{"mode", "window"}, {"name", m["title"]}, {"value", m["selector"]}};
     }
     targets_ = targets;
+    // Games page: one row per program (not per window), saved profiles kept even when the game is closed.
+    QVariantList games, others;
+    QSet<QString> seen;
+    for (auto w : games_) {
+        const auto m = w.toMap();
+        const QString exe = m["executable"].toString();
+        if (seen.contains(exe.toLower()))
+            continue;
+        seen.insert(exe.toLower());
+        const bool profile = stored().profiles.contains(exe.toLower());
+        const bool game = profile || looksLikeGame(exe, m["fullscreen"].toBool());
+        const QVariantMap row{{"title", programTitle(exe)}, {"executable", exe}, {"running", true}, {"game", game}};
+        (game ? games : others) << row;
+    }
+    for (auto it = stored().profiles.begin(); it != stored().profiles.end(); ++it)
+        if (!seen.contains(it.key()))
+            games << QVariantMap{{"title", it.value().toObject()["name"].toString()},
+                                 {"executable", it.key()},
+                                 {"running", false},
+                                 {"game", true}};
+    gameList_ = games + others;
     emit catalogChanged();
 }
 void Controller::importVideos() {
     for (auto p : QFileDialog::getOpenFileNames(nullptr, "Importer des vidéos", {},
                                                 "Vidéos (*.mp4 *.mkv *.mov *.webm *.avi)"))
         jobs_.import(p);
+}
+void Controller::importFiles(QStringList urls) {
+    static const QStringList ok{"mp4", "mkv", "mov", "webm", "avi"};
+    int count = 0;
+    for (const auto &u : urls) {
+        const QString p = QUrl(u).isLocalFile() ? QUrl(u).toLocalFile() : u;
+        if (QFileInfo(p).isFile() && ok.contains(QFileInfo(p).suffix().toLower())) {
+            jobs_.import(p);
+            ++count;
+        }
+    }
+    notify(count ? QString("%1 vidéo(s) en cours d'import.").arg(count) : "Aucune vidéo reconnue dans ce dépôt.", !count);
 }
 void Controller::selectClip(int i) {
     selected_ = library_.get(i);
@@ -112,6 +155,50 @@ void Controller::reveal(QString path) {
     QProcess::startDetached("explorer.exe", QFileInfo(path).isDir()
                                                 ? QStringList{QDir::toNativeSeparators(path)}
                                                 : QStringList{"/select,", QDir::toNativeSeparators(path)});
+}
+void Controller::copyFile(QString p) {
+    if (!QFileInfo::exists(p)) {
+        notify("Fichier introuvable.", true);
+        return;
+    }
+    auto *mime = new QMimeData;
+    mime->setUrls({QUrl::fromLocalFile(p)});
+    QApplication::clipboard()->setMimeData(mime);
+    notify("Fichier copié : colle-le directement dans Discord.");
+}
+void Controller::sendToDiscord(QString p) {
+    const QString hook = stored().discordWebhook.trimmed();
+    if (!hook.startsWith("https://discord.com/api/webhooks/") && !hook.startsWith("https://discordapp.com/api/webhooks/")) {
+        notify("Renseigne d'abord un webhook Discord valide dans les réglages.", true);
+        return;
+    }
+    auto *file = new QFile(p);
+    if (!file->exists() || file->size() > 25LL * 1024 * 1024 || !file->open(QIODevice::ReadOnly)) {
+        notify(file->exists() && file->size() > 25LL * 1024 * 1024 ? "Clip trop lourd pour Discord (25 Mo max) : exporte-le en plus petit."
+                                                                     : "Fichier introuvable.", true);
+        delete file;
+        return;
+    }
+    auto *multi = new QHttpMultiPart(QHttpMultiPart::FormDataType);
+    QHttpPart part;
+    part.setHeader(QNetworkRequest::ContentTypeHeader, "video/mp4");
+    part.setHeader(QNetworkRequest::ContentDispositionHeader,
+                   QString("form-data; name=\"file\"; filename=\"%1\"").arg(QFileInfo(p).fileName()));
+    part.setBodyDevice(file);
+    file->setParent(multi);
+    multi->append(part);
+    auto *net = new QNetworkAccessManager(this);
+    auto *reply = net->post(QNetworkRequest(QUrl(hook)), multi);
+    multi->setParent(reply);
+    notify("Envoi sur Discord…");
+    connect(reply, &QNetworkReply::finished, this, [this, reply, net] {
+        if (reply->error() == QNetworkReply::NoError)
+            notify("Clip envoyé sur Discord.");
+        else
+            notify("Envoi Discord échoué : " + reply->errorString(), true);
+        reply->deleteLater();
+        net->deleteLater();
+    });
 }
 void Controller::copyPath(QString p) {
     QApplication::clipboard()->setText(p);

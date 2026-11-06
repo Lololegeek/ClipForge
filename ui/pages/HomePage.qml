@@ -154,7 +154,7 @@ ColumnLayout {
     Text {
         visible: clipLibrary.count === 0
         Layout.fillWidth: true
-        text: "Aucun clip pour l'instant. Active le replay, puis appuie sur F" + (appController.config.saveKey - 111) + " pendant une partie : le clip apparaîtra ici."
+        text: "Aucun clip pour l'instant. Active le replay, puis appuie sur " + appController.keyName(appController.config.saveKey) + " pendant une partie : le clip apparaîtra ici."
         color: Theme.secondary
         wrapMode: Text.Wrap
     }

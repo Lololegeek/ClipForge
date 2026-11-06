@@ -1,6 +1,7 @@
 #pragma once
 #include <QJsonObject>
 #include <QString>
+#include <QStringList>
 namespace cf {
 struct Settings {
     QString clips, temporary, mode = "display", target, codec = "h264", encoder = "auto", audio = "system",
@@ -12,13 +13,21 @@ struct Settings {
     // Library cleanup limits (0 = off). Favourites are never removed.
     int cleanupGB = 0, cleanupDays = 0;
     double systemVolume = 1.0, micVolume = 1.0;
-    bool closeToTray = true, autoCapture = false, startMinimized = false, gameOverlay = true, autoUpdate = true, alwaysReplay = true;
+    bool closeToTray = true, autoCapture = false, startMinimized = false, gameOverlay = true, captureCursor = true, autoUpdate = true, alwaysReplay = true, onboarded = false;
     bool separateTracks = true, pushToTalk = false, saveSound = true;
+    QString fileTemplate; // empty = keep OBS's own name; placeholders {jeu} {date} {heure}
+    QString discordWebhook;
+    bool gameFolders = false;
     QJsonObject profiles;
     static Settings defaults();
     static Settings fromJson(const QJsonObject &o);
     QJsonObject json() const;
     QString validate() const;
+    // 0×0 means "follow the screen resolution"; Controller::start resolves it to real pixels.
+    bool native() const { return width == 0 && height == 0; }
+    void repair(); // resets only the invalid fields to their defaults
+    // Fields that are about the app, not the capture: a game profile never overrides them.
+    static const QStringList &appKeys();
     static Settings load(const QString &path);
     bool save(const QString &path, QString *error = nullptr) const;
 };

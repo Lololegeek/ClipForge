@@ -9,6 +9,41 @@ ColumnLayout {
     spacing: 18
     property bool listMode: false
     property var contextClip: ({})
+    // Dropping video files anywhere on the page imports them.
+    Item {
+        Layout.preferredWidth: 0
+        Layout.preferredHeight: 0
+        DropArea {
+            id: dropZone
+            x: 0
+            y: 0
+            width: page.width
+            height: page.height
+            keys: ["text/uri-list"]
+            onDropped: drop => {
+                if (drop.hasUrls)
+                    appController.importFiles(drop.urls.map(u => u.toString()));
+            }
+        }
+        Rectangle {
+            visible: dropZone.containsDrag
+            x: 0
+            y: 0
+            width: page.width
+            height: page.height
+            z: 5
+            radius: Theme.radiusSm
+            color: "#208c8cff"
+            border.color: Theme.accent
+            border.width: 2
+            Text {
+                anchors.centerIn: parent
+                text: "Dépose tes vidéos pour les importer"
+                color: Theme.text
+                font.pixelSize: 18
+            }
+        }
+    }
     // Multi-selection: clip id -> true. Reassigned on every change so bindings update.
     property bool selecting: false
     property var picked: ({})
@@ -120,7 +155,7 @@ ColumnLayout {
             }))
             onActivated: clipLibrary.filterGame(model[currentIndex].value)
         }
-        CheckBox {
+        CCheck {
             id: onlyFav
             text: "Favoris"
             onToggled: page.applyFilter()
@@ -184,7 +219,7 @@ ColumnLayout {
     }
     Text {
         visible: clipLibrary.count === 0
-        text: search.text.length > 0 || onlyFav.checked || gameFilter.currentIndex > 0 ? "Aucun clip ne correspond à ces filtres." : "Aucun clip pour l'instant. Active le replay et appuie sur F" + (appController.config.saveKey - 111) + ", ou importe une vidéo."
+        text: search.text.length > 0 || onlyFav.checked || gameFilter.currentIndex > 0 ? "Aucun clip ne correspond à ces filtres." : "Aucun clip pour l'instant. Active le replay et appuie sur " + appController.keyName(appController.config.saveKey) + ", ou importe une vidéo."
         color: Theme.secondary
         wrapMode: Text.Wrap
         Layout.fillWidth: true
@@ -407,6 +442,14 @@ ColumnLayout {
                 tagDialog.open();
                 editTags.forceActiveFocus();
             }
+        }
+        CMenuItem {
+            text: "Copier le fichier (coller dans Discord)"
+            onTriggered: appController.copyFile(page.contextClip.path)
+        }
+        CMenuItem {
+            text: "Envoyer sur Discord (webhook)"
+            onTriggered: appController.sendToDiscord(page.contextClip.path)
         }
         CMenuItem {
             text: "Copier le chemin"

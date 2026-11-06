@@ -29,6 +29,7 @@ class Controller : public QObject {
     Q_PROPERTY(QVariantList targets READ targets NOTIFY catalogChanged)
     Q_PROPERTY(QVariantList microphones READ microphones NOTIFY catalogChanged)
     Q_PROPERTY(QVariantList games READ games NOTIFY catalogChanged)
+    Q_PROPERTY(QVariantList gameList READ gameList NOTIFY catalogChanged)
     Q_PROPERTY(QVariantMap selected READ selected NOTIFY selectionChanged)
     Q_PROPERTY(QVariantList segments READ segments NOTIFY editChanged)
     Q_PROPERTY(bool exportBusy READ exportBusy NOTIFY changed)
@@ -40,6 +41,10 @@ class Controller : public QObject {
     Q_PROPERTY(QString updateState READ updateState NOTIFY changed)
     Q_PROPERTY(QString updateVersion READ updateVersion NOTIFY changed)
     Q_PROPERTY(double updateProgress READ updateProgress NOTIFY changed)
+    Q_PROPERTY(QString updateNotes READ updateNotes NOTIFY changed)
+    Q_PROPERTY(double updateSizeMB READ updateSizeMB NOTIFY changed)
+    Q_PROPERTY(bool updateDelta READ updateDelta NOTIFY changed)
+    Q_PROPERTY(bool updateSelf READ updateSelf CONSTANT)
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY editChanged)
     Q_PROPERTY(bool canRedo READ canRedo NOTIFY editChanged)
     Q_PROPERTY(bool micMuted READ micMuted NOTIFY changed)
@@ -68,8 +73,9 @@ class Controller : public QObject {
     bool quitting() const {
         return quitting_;
     }
+    // The Settings page always edits the global settings, even while a game profile drives the capture.
     QVariantMap config() const {
-        return settings_.json().toVariantMap();
+        return stored().json().toVariantMap();
     }
     QVariantMap metrics() const {
         return metrics_;
@@ -86,6 +92,12 @@ class Controller : public QObject {
     QVariantList games() const {
         return games_;
     }
+    // Programs for the Games page: {title, executable, running, game, key}; games first, saved profiles included.
+    QVariantList gameList() const {
+        return gameList_;
+    }
+    static QString programTitle(const QString &exePath);
+    static bool looksLikeGame(const QString &exePath, bool fullscreen);
     QVariantMap selected() const {
         return selected_;
     }
@@ -102,8 +114,13 @@ class Controller : public QObject {
     QString lastExport() const {
         return lastExport_;
     }
+    // Label shown in the UI; the numeric applicationVersion stays for update comparisons.
     QString version() const {
+#ifdef CF_VERSION_LABEL
+        return QStringLiteral(CF_VERSION_LABEL);
+#else
         return QCoreApplication::applicationVersion();
+#endif
     }
     bool autostart() const;
     QString updateState() const {
@@ -114,6 +131,18 @@ class Controller : public QObject {
     }
     double updateProgress() const {
         return updater_.progress();
+    }
+    QString updateNotes() const {
+        return updater_.notes();
+    }
+    double updateSizeMB() const {
+        return updater_.downloadSize() / 1048576.0;
+    }
+    bool updateDelta() const {
+        return updater_.delta();
+    }
+    bool updateSelf() const {
+        return updater_.selfUpdatable();
     }
     bool canUndo() const {
         return !undo_.isEmpty();
@@ -136,11 +165,36 @@ class Controller : public QObject {
     Q_INVOKABLE void addMarker();
     void toggleRecording(); // self-test only
     Q_INVOKABLE bool apply(QVariantMap settings);
+    // Shortcut helpers for the QML key editor: a code is (modifiers << 16) | virtual-key.
+    Q_INVOKABLE QString keyName(int code) const {
+        return hotkey::name(code);
+    }
+    // Builds a code from a QML key event (native virtual key + Qt modifiers); 0 if it is not a usable shortcut.
+    Q_INVOKABLE int keyCode(int qtKey, int nativeScanCode, int qtModifiers) const {
+        const int nativeVirtualKey = hotkey::fromQt(qtKey, nativeScanCode);
+        if (!nativeVirtualKey)
+            return 0;
+        int m = 0;
+        if (qtModifiers & Qt::ControlModifier)
+            m |= hotkey::kCtrl;
+        if (qtModifiers & Qt::AltModifier)
+            m |= hotkey::kAlt;
+        if (qtModifiers & Qt::ShiftModifier)
+            m |= hotkey::kShift;
+        const int code = hotkey::make(nativeVirtualKey, m);
+        return hotkey::valid(code) ? code : 0;
+    }
+    Q_INVOKABLE bool keyUsable(int code, bool allowShift) const {
+        return hotkey::valid(code) && (allowShift || !(hotkey::mods(code) & hotkey::kShift));
+    }
     Q_INVOKABLE void selectClip(int index);
     Q_INVOKABLE void importVideos();
+    Q_INVOKABLE void importFiles(QStringList urls);
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void reveal(QString path);
     Q_INVOKABLE void copyPath(QString path);
+    Q_INVOKABLE void copyFile(QString path);
+    Q_INVOKABLE void sendToDiscord(QString path);
     Q_INVOKABLE void addSegment(double in, double out, double speed);
     Q_INVOKABLE void useSegment(double in, double out, double speed);
     Q_INVOKABLE void removeSegment(int index);
@@ -148,12 +202,15 @@ class Controller : public QObject {
     Q_INVOKABLE void redo();
     // options: format, height, fps, codec, crf, maxMB, vertical, volume, gameVolume, micVolume.
     Q_INVOKABLE void exportClip(QVariantMap options);
+    Q_INVOKABLE void cancelExport() {
+        jobs_.cancelExport();
+    }
     Q_INVOKABLE void setCrop(double x, double y, double w, double h);
     Q_INVOKABLE void captureFrame(double seconds);
     Q_INVOKABLE void cleanupNow();
     Q_INVOKABLE void saveProject();
     Q_INVOKABLE void loadProject();
-    Q_INVOKABLE void saveProfile(QString executable, QString name);
+    Q_INVOKABLE void saveProfile(QString executable, QString name, QVariantMap overrides = {});
     Q_INVOKABLE void removeProfile(QString executable);
     Q_INVOKABLE void refreshWindows();
     Q_INVOKABLE void configurationFile(bool importing);
@@ -175,8 +232,18 @@ class Controller : public QObject {
     void openEditor();
 
   private:
-    QString data_, state_ = "Initializing", message_, method_ = "—", encoder_ = "—", game_, lastClip_, lastExport_;
-    Settings settings_;
+    QString data_, state_ = "Initializing", message_, method_ = "—", encoder_ = "—", game_, lastClip_, lastExport_, exportGame_;
+    Settings settings_; // what the capture runs with (global settings, or a game profile on top of them)
+    Settings global_;   // the user's own settings while a profile is active
+    QString profileExe_; // executable whose profile is applied; empty = none
+    const Settings &stored() const {
+        return profileExe_.isEmpty() ? settings_ : global_;
+    }
+    Settings &stored() {
+        return profileExe_.isEmpty() ? settings_ : global_;
+    }
+    void useSettings(const Settings &next, const QString &why);
+    static Settings withProfile(const Settings &base, const QJsonObject &profile);
     ClipModel library_;
     MediaJobs jobs_;
     GlobalHotkeys hotkeys_;
@@ -184,7 +251,7 @@ class Controller : public QObject {
     ObsEngine *engine_;
     QThread worker_;
     QSystemTrayIcon *tray_ = nullptr;
-    QTimer detection_, updateTimer_;
+    QTimer detection_, updateTimer_, watchTimer_;
     int quitAttempts_ = 0;
     Overlay *overlay_ = nullptr;
     QElapsedTimer saveGate_, recordGate_, notifyGate_, diskGate_;
@@ -194,7 +261,7 @@ class Controller : public QObject {
     bool ready_ = false, recording_ = false, test_ = false, quitting_ = false, autoStarted_ = false, uiOnly_ = false, restartPending_ = false;
     int replayRetries_ = 0;
     QVariantMap metrics_, selected_;
-    QVariantList encoders_, targets_, microphones_, games_;
+    QVariantList encoders_, targets_, microphones_, games_, gameList_;
     EditProject project_;
     QVector<EditProject> undo_, redo_;
     double progress_ = 0;
@@ -202,20 +269,25 @@ class Controller : public QObject {
     void checkpoint();
     void detect();
     void scan();
+    void updateTrayState();
     void connectTray();
     void scheduleReplayRetry();
     // A clip request waits for OBS to write the file: how much of it to keep and when the key was pressed.
     struct PendingClip {
         double keep;
         qint64 at;
+        QString game;
     };
     QList<PendingClip> pendingClips_;
     QVector<qint64> markers_;                   // epoch ms of markers still inside the buffer
+    QHash<QString, QString> clipGames_;         // saved path -> game name, for clips still being trimmed
     QHash<QString, QVariantList> clipMarkers_; // saved path -> marker offsets from the clip end (s)
     bool micMuted_ = false;
     QTimer pttTimer_;
     void requestClip(double seconds);
     void clipSaved(QString path);
+    QString organizeClipFile(const QString &path, const QString &gameName);
+    QString currentGameName() const;
     void clipImported(QVariantMap data);
     void setMicMuted(bool muted);
     void micKey();

@@ -1,8 +1,11 @@
 #include "editor/EditProject.h"
 #include "export/MediaJobs.h"
 #include "library/ClipModel.h"
+#include "hotkeys/GlobalHotkeys.h"
 #include "settings/Settings.h"
 #include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QTemporaryDir>
 #include <QtTest>
 class CoreTests : public QObject {
@@ -31,6 +34,73 @@ class CoreTests : public QObject {
         s.width = 1;
         QVERIFY(!s.save(p));
         QCOMPARE(cf::Settings::load(p).width, 1920);
+    }
+    void hotkeyCodes() {
+        using namespace cf::hotkey;
+        QVERIFY(valid(0x77));                                // plain F8 (old settings files)
+        QVERIFY(!valid(0x41));                               // bare "A" would hijack typing
+        QVERIFY(valid(make('K', kCtrl | kAlt)));
+        QVERIFY(!valid(make(0x10, kCtrl)));                  // a modifier alone is not a shortcut
+        QCOMPARE(name(0), QString("Désactivée"));
+        QCOMPARE(name(0x77), QString("F8"));
+        QCOMPARE(name(make('K', kCtrl | kShift)), QString("Ctrl+Maj+K"));
+        cf::Settings s = cf::Settings::defaults();
+        s.saveKey = make(0x77, kShift);
+        QVERIFY(!s.validate().isEmpty());                    // Shift+save is the whole-buffer key
+        s.saveKey = make('G', kCtrl);
+        s.markerKey = make('G', kCtrl | kShift);
+        QVERIFY(!s.validate().isEmpty());
+        s.markerKey = make('H', kCtrl);
+        QVERIFY(s.validate().isEmpty());
+    }
+    void nativeResolution() {
+        cf::Settings s = cf::Settings::defaults();
+        s.width = 0;
+        s.height = 0;
+        QVERIFY(s.native());
+        QVERIFY(s.validate().isEmpty());
+        s.width = 1920; // half-native is not a thing
+        QVERIFY(!s.validate().isEmpty());
+        s.height = 1080;
+        s.width = 0;
+        s.repair();
+        QVERIFY(!s.native()); // repair resets the inconsistent pair to the defaults
+    }
+    void wrongTypesKeepDefaults() {
+        auto s = cf::Settings::fromJson(QJsonDocument::fromJson(
+            R"({"systemVolume":"loud","micVolume":null,"fps":"x","replaySeconds":[1],"gameFolders":"yes"})").object());
+        const auto d = cf::Settings::defaults();
+        QCOMPARE(s.systemVolume, d.systemVolume);
+        QCOMPARE(s.micVolume, d.micVolume);
+        QCOMPARE(s.fps, d.fps);
+        QCOMPARE(s.replaySeconds, d.replaySeconds);
+        QCOMPARE(s.gameFolders, d.gameFolders);
+    }
+    void qtKeyMapping() {
+        QCOMPARE(cf::hotkey::fromQt(Qt::Key_F9, 0), 0x78);
+        QCOMPARE(cf::hotkey::fromQt(Qt::Key_X, 0), int('X'));
+        QCOMPARE(cf::hotkey::fromQt(Qt::Key_Control, 0), 0);
+        QVERIFY(cf::hotkey::valid(cf::hotkey::make(cf::hotkey::fromQt(Qt::Key_X, 0), cf::hotkey::kCtrl)));
+        QVERIFY(!cf::hotkey::valid(cf::hotkey::make(cf::hotkey::fromQt(Qt::Key_X, 0), 0)));
+    }
+    void lenientSettings() {
+        // One broken field resets only itself: the rest of the user's settings survive.
+        QTemporaryDir d;
+        QString p = d.filePath("settings.json");
+        QFile f(p);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write(QString(R"({"clips":"%1","replaySeconds":120,"fps":75,"codec":"vp9","bitrate":24000,"micKey":119})")
+                    .arg(d.path())
+                    .toUtf8());
+        f.close();
+        auto s = cf::Settings::load(p);
+        QVERIFY(s.validate().isEmpty());
+        QCOMPARE(s.clips, d.path());
+        QCOMPARE(s.replaySeconds, 120);
+        QCOMPARE(s.bitrate, 24000);
+        QCOMPARE(s.fps, 60);
+        QCOMPARE(s.codec, QString("h264"));
+        QCOMPARE(s.micKey, 0); // clashed with the save key (F8)
     }
     void editRoundtrip() {
         QTemporaryDir d;

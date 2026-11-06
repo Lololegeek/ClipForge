@@ -75,7 +75,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ github.ref_name }}" dist/ClipForge-Setup-x64.exe dist/ClipForge-Windows-x64.zip dist/SHA256SUMS.txt `
+          # Delta update: the manifest says where each file sits inside the ZIP, so clients fetch only the
+          # changed files from it with HTTP Range requests. The release holds just these three assets.
+          python scripts/make_update.py --zip dist/ClipForge-Windows-x64.zip --out dist/ClipForge-manifest.json --tag "${{ github.ref_name }}" --installer dist/ClipForge-Setup-x64.exe
+          if ($LASTEXITCODE -ne 0) { throw "make_update failed" }
+          gh release create "${{ github.ref_name }}" dist/ClipForge-Setup-x64.exe dist/ClipForge-Windows-x64.zip dist/ClipForge-manifest.json `
             --title "ClipForge ${{ github.ref_name }}" --generate-notes
 
   discord:

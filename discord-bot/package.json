@@ -1,0 +1,8 @@
+{
+  "name": "clipforge-discord-bot",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "scripts": { "start": "node index.js" },
+  "dependencies": { "discord.js": "14.16.3" }
+}

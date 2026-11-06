@@ -152,6 +152,16 @@ int main(int argc, char **argv) {
         else if (!controller.config()["startMinimized"].toBool())
             window->show();
         if (args.contains("--screenshot")) {
+            if (qEnvironmentVariableIsSet("CF_PAGE"))
+                window->setProperty("page", qEnvironmentVariableIntValue("CF_PAGE"));
+            if (qEnvironmentVariableIsSet("CF_GAME_DIALOG"))
+                QTimer::singleShot(1200, window, [window] {
+                    if (auto d = window->findChild<QObject *>("gameDialog"))
+                        QMetaObject::invokeMethod(d, "openFor", Q_ARG(QVariant, "c:\games\demo.exe"),
+                                                  Q_ARG(QVariant, "Firefighting Simulator: Ignite"));
+                });
+            if (qEnvironmentVariableIsSet("CF_UPDATE_DIALOG"))
+                QTimer::singleShot(1200, window, [window] { QMetaObject::invokeMethod(window, "previewUpdate"); });
             QTimer::singleShot(2200, &app, [window, data] { window->grabWindow().save(data + "/ui.png"); });
             QTimer::singleShot(3000, &app, &QApplication::quit);
         }

@@ -41,6 +41,8 @@ class ClipModel : public QAbstractListModel {
     }
     // Games present in the library with their clip count, most clips first.
     QVariantList gameList() const;
+    // Game recorded for a clip file, empty when unknown.
+    QString gameOf(QString path) const;
     Q_INVOKABLE int favoriteMany(QVariantList ids, bool value);
     Q_INVOKABLE int tagMany(QVariantList ids, QString tag);
     Q_INVOKABLE int removeMany(QVariantList ids);

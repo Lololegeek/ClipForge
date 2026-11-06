@@ -32,6 +32,13 @@ QVariantList windows() {
             const auto name = QFileInfo(path).fileName();
             if (name.isEmpty())
                 return TRUE;
+            // Fullscreen/borderless window covering its whole monitor: a strong hint that it is a game.
+            RECT wr{};
+            bool fullscreen = false;
+            MONITORINFO mi{sizeof(MONITORINFO)};
+            if (GetWindowRect(w, &wr) && GetMonitorInfoW(MonitorFromWindow(w, MONITOR_DEFAULTTONEAREST), &mi))
+                fullscreen = wr.left <= mi.rcMonitor.left && wr.top <= mi.rcMonitor.top && wr.right >= mi.rcMonitor.right &&
+                             wr.bottom >= mi.rcMonitor.bottom;
             QString t = QString::fromWCharArray(title);
             auto encode = [](QString v) { return v.replace("#", "#22").replace(":", "#3A"); };
             QString selector = encode(t) + ":" + encode(QString::fromWCharArray(cls)) + ":" + encode(name);
@@ -39,6 +46,7 @@ QVariantList windows() {
                                                                        {"executable", path},
                                                                        {"name", name},
                                                                        {"selector", selector},
+                                                                       {"fullscreen", fullscreen},
                                                                        {"pid", qulonglong(pid)}});
             return TRUE;
         },

@@ -24,8 +24,15 @@ ClipModel::ClipModel(QString path, QObject *p) : QAbstractListModel(p) {
            "TEXT,thumbnail TEXT,duration REAL,size INTEGER,created TEXT,game TEXT DEFAULT '',favorite "
            "INTEGER DEFAULT 0,tags TEXT DEFAULT '')");
     q.exec("CREATE INDEX IF NOT EXISTS clips_created ON clips(created DESC)");
-    // 0.8: marker positions (seconds from the clip start, JSON array). Fails harmlessly once the column exists.
-    q.exec("ALTER TABLE clips ADD COLUMN markers TEXT DEFAULT ''");
+    // Schema versions live in PRAGMA user_version: 0 = 0.7 and earlier, 1 = marker positions (0.8).
+    int version = 0;
+    if (q.exec("PRAGMA user_version") && q.next())
+        version = q.value(0).toInt();
+    if (version < 1) {
+        // A database already carrying the column (made before versioning) fails this harmlessly.
+        q.exec("ALTER TABLE clips ADD COLUMN markers TEXT DEFAULT ''");
+        q.exec("PRAGMA user_version=1");
+    }
     reload();
 }
 ClipModel::~ClipModel() {
@@ -135,6 +142,12 @@ QVariantList ClipModel::gameList() const {
         while (q.next())
             games << QVariantMap{{"game", q.value(0).toString()}, {"count", q.value(1).toInt()}};
     return games;
+}
+QString ClipModel::gameOf(QString path) const {
+    QSqlQuery q(db_);
+    q.prepare("SELECT game FROM clips WHERE path=:p");
+    q.bindValue(":p", path);
+    return q.exec() && q.next() ? q.value(0).toString() : QString();
 }
 void ClipModel::reload() {
     beginResetModel();

@@ -40,24 +40,6 @@ ColumnLayout {
             }
         encoder.currentIndex = 0
     }
-    function keyRows(current) {
-        var rows = []
-        for (var i = 0; i < 24; ++i) {
-            var key = 112 + i
-            rows.push({ name: "F" + (i + 1), value: key, available: true })
-        }
-        return rows
-    }
-    // Optional keys: first row disables the shortcut.
-    function optionalKeyRows() {
-        return [{ name: "Désactivée", value: 0 }].concat(keyRows())
-    }
-    function keyIndex(rows, value) {
-        for (var i = 0; i < rows.length; ++i)
-            if (rows[i].value === value)
-                return i
-        return 0
-    }
     function apply() {
         draft.mode = ["display", "window", "game"][mode.currentIndex];
         draft.target = target.currentIndex >= 0 ? target.model[target.currentIndex].value : "";
@@ -79,13 +61,17 @@ ColumnLayout {
         draft.autoUpdate = autoUpdate.checked;
         draft.alwaysReplay = alwaysReplay.checked;
         draft.gameOverlay = gameOverlay.checked;
-        draft.saveKey = saveKey.model[saveKey.currentIndex].value;
-        draft.markerKey = markerKey.model[markerKey.currentIndex].value;
-        draft.micKey = micKey.model[micKey.currentIndex].value;
+        draft.captureCursor = captureCursor.checked;
+        draft.saveKey = saveKey.code;
+        draft.markerKey = markerKey.code;
+        draft.micKey = micKey.code;
         draft.pushToTalk = pushToTalk.checked;
         draft.clipSeconds = Number(clipSeconds.text);
         draft.separateTracks = separateTracks.checked;
         draft.saveSound = saveSound.checked;
+        draft.fileTemplate = fileTemplate.text;
+        draft.gameFolders = gameFolders.checked;
+        draft.discordWebhook = discordWebhook.text.trim();
         draft.cleanupGB = Number(cleanupGB.text);
         draft.cleanupDays = Number(cleanupDays.text);
         appController.apply(draft);
@@ -246,7 +232,7 @@ ColumnLayout {
                         text: settings.draft.width
                         Layout.fillWidth: true
                         validator: IntValidator {
-                            bottom: 320
+                            bottom: 0
                             top: 7680
                         }
                     }
@@ -258,16 +244,17 @@ ColumnLayout {
                         text: settings.draft.height
                         Layout.fillWidth: true
                         validator: IntValidator {
-                            bottom: 180
+                            bottom: 0
                             top: 4320
                         }
                     }
                     CCombo {
-                        model: ["Personnalisée", "720p", "1080p", "1440p", "2160p"]
+                        model: ["Personnalisée", "Native (écran)", "720p", "1080p", "1440p", "2160p"]
+                        currentIndex: Number(widthInput.text) === 0 && Number(heightInput.text) === 0 ? 1 : 0
                         onActivated: {
                             if (currentIndex > 0) {
-                                widthInput.text = [0, 1280, 1920, 2560, 3840][currentIndex];
-                                heightInput.text = [0, 720, 1080, 1440, 2160][currentIndex];
+                                widthInput.text = [0, 0, 1280, 1920, 2560, 3840][currentIndex];
+                                heightInput.text = [0, 0, 720, 1080, 1440, 2160][currentIndex];
                             }
                         }
                     }
@@ -407,7 +394,7 @@ ColumnLayout {
                     Layout.fillWidth: true
                 }
             }
-            CheckBox {
+            CCheck {
                 id: separateTracks
                 enabled: settings.stopped
                 text: "Pistes séparées : jeu et micro enregistrés à part (réglables dans l'éditeur)"
@@ -440,41 +427,49 @@ ColumnLayout {
                     text: "Sauvegarder"
                     Layout.preferredWidth: 180
                 }
-                CCombo {
+                HotkeyField {
                     id: saveKey
-                    textRole: "name"
-                    model: settings.keyRows(settings.draft.saveKey)
-                    currentIndex: settings.draft.saveKey - 112
+                    code: settings.draft.saveKey
+                    allowShift: false
+                    hint: "Appuyez sur la combinaison (sans Maj)…"
                     Layout.fillWidth: true
+                    onEdited: c => saveKey.code = c
                 }
                 Label {
                     text: "Poser un marqueur"
                 }
-                CCombo {
+                HotkeyField {
                     id: markerKey
-                    textRole: "name"
-                    model: settings.optionalKeyRows()
-                    currentIndex: settings.keyIndex(model, settings.draft.markerKey)
+                    code: settings.draft.markerKey
+                    optional: true
                     Layout.fillWidth: true
+                    onEdited: c => markerKey.code = c
                 }
                 Label {
                     text: "Micro (couper / parler)"
                 }
-                CCombo {
+                HotkeyField {
                     id: micKey
-                    textRole: "name"
-                    model: settings.optionalKeyRows()
-                    currentIndex: settings.keyIndex(model, settings.draft.micKey)
+                    code: settings.draft.micKey
+                    optional: true
                     Layout.fillWidth: true
+                    onEdited: c => micKey.code = c
                 }
             }
-            CheckBox {
+            Text {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                color: Theme.secondary
+                font.pixelSize: 13
+                text: "Clique sur un champ puis appuie sur ta combinaison (F1–F24, ou Ctrl / Alt / Maj + une touche). Retour arrière désactive un raccourci facultatif. Maj + sauvegarde garde tout le replay."
+            }
+            CCheck {
                 id: pushToTalk
-                enabled: micKey.currentIndex > 0
+                enabled: micKey.code !== 0
                 text: "Push-to-talk : le micro n'enregistre que tant que la touche est maintenue"
                 checked: settings.draft.pushToTalk
             }
-            CheckBox {
+            CCheck {
                 id: saveSound
                 text: "Jouer un son quand un clip est sauvegardé"
                 checked: settings.draft.saveSound
@@ -497,37 +492,42 @@ ColumnLayout {
                 font.pixelSize: 19
                 font.weight: Font.DemiBold
             }
-            CheckBox {
+            CCheck {
                 id: alwaysReplay
                 text: "Activer le replay au lancement de ClipForge"
                 checked: settings.draft.alwaysReplay
             }
-            CheckBox {
+            CCheck {
                 id: closeTray
                 text: "Réduire dans la zone de notification à la fermeture"
                 checked: settings.draft.closeToTray
             }
-            CheckBox {
+            CCheck {
                 id: automatic
                 text: "Activer automatiquement le replay pour mes profils de jeu"
                 checked: settings.draft.autoCapture
             }
-            CheckBox {
+            CCheck {
                 id: minimized
                 text: "Démarrer avec la fenêtre masquée"
                 checked: settings.draft.startMinimized
             }
-            CheckBox {
+            CCheck {
                 text: "Lancer ClipForge au démarrage de Windows"
                 checked: appController.autostart
                 onToggled: appController.setAutostart(checked)
             }
-            CheckBox {
+            CCheck {
                 id: gameOverlay
                 text: "Afficher une notification en jeu quand un clip est sauvegardé"
                 checked: settings.draft.gameOverlay
             }
-            CheckBox {
+            CCheck {
+                id: captureCursor
+                text: "Afficher le curseur de la souris dans les clips"
+                checked: settings.draft.captureCursor
+            }
+            CCheck {
                 id: autoUpdate
                 text: "Télécharger automatiquement les mises à jour"
                 checked: settings.draft.autoUpdate
@@ -535,12 +535,13 @@ ColumnLayout {
             RowLayout {
                 spacing: 10
                 ActionButton {
-                    text: appController.updateState === "available" ? "Télécharger " + appController.updateVersion
-                        : appController.updateState === "ready" ? "Redémarrer et installer " + appController.updateVersion
-                        : appController.updateState === "downloading" ? "Téléchargement " + Math.round(appController.updateProgress * 100) + " %"
+                    readonly property string st: appController.updateState
+                    primary: st === "available" || st === "ready" || st === "downloading"
+                    text: st === "checking" ? "Recherche…"
+                        : st === "available" || st === "ready" || st === "downloading" ? "Voir la mise à jour " + appController.updateVersion
                         : "Rechercher une mise à jour"
-                    enabled: appController.updateState !== "checking" && appController.updateState !== "downloading"
-                    onClicked: appController.updateState === "idle" ? appController.checkForUpdates() : appController.installUpdate()
+                    enabled: st !== "checking"
+                    onClicked: primary ? window.showUpdate() : appController.checkForUpdates()
                 }
             }
             Text {
@@ -560,6 +561,33 @@ ColumnLayout {
                     text: "Ouvrir le dossier"
                     onClicked: appController.reveal("")
                 }
+            }
+            Label {
+                text: "Nom des fichiers (vide = nom par défaut) — variables : {jeu} {date} {heure}"
+                color: Theme.secondary
+                font.pixelSize: 12
+            }
+            CField {
+                id: fileTemplate
+                text: settings.draft.fileTemplate
+                placeholderText: "{jeu} {date} {heure}"
+                Layout.fillWidth: true
+            }
+            Label {
+                text: "Webhook Discord (clic droit sur un clip > Envoyer sur Discord, 25 Mo max)"
+                color: Theme.secondary
+                font.pixelSize: 12
+            }
+            CField {
+                id: discordWebhook
+                text: settings.draft.discordWebhook
+                placeholderText: "https://discord.com/api/webhooks/…"
+                Layout.fillWidth: true
+            }
+            CCheck {
+                id: gameFolders
+                text: "Ranger les clips dans un sous-dossier par jeu"
+                checked: settings.draft.gameFolders
             }
             GridLayout {
                 columns: 2

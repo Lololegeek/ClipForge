@@ -11,6 +11,9 @@ struct ExportOptions {
     double maxMB = 0;                       // > 0: aim for a file under this size (Discord)
     bool vertical = false;                  // centre-crop to 9:16 after the user crop
     int crf = 20;
+    bool normalize = false; // EBU R128 loudness normalisation of the final audio
+    QString watermark;       // path of a transparent PNG badge (drawn for a 1080p frame); empty = none
+    int watermarkCorner = 3; // 0 top-left, 1 top-right, 2 bottom-left, 3 bottom-right
 };
 class MediaJobs : public QObject {
     Q_OBJECT
@@ -28,6 +31,7 @@ class MediaJobs : public QObject {
     int pendingImports() const {
         return int(queue_.size());
     }
+    void cancelExport();
     static QStringList exportArguments(const EditProject &, QString destination, const ExportOptions &);
     static double outputDuration(const EditProject &);
   signals:
@@ -51,6 +55,7 @@ class MediaJobs : public QObject {
     int active_ = 0;
     QProcess *exporter_ = nullptr;
     QString exportTemp_;
+    bool exportCancelled_ = false;
     void next();
     void run(Import job);
     QString tool(QString name) const;

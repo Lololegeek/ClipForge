@@ -14,7 +14,7 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: "Le replay garde les " + appController.config.replaySeconds + " dernières secondes en mémoire. Appuie sur F" + (appController.config.saveKey - 111) + " pour en faire un clip."
+        text: "Le replay garde les " + appController.config.replaySeconds + " dernières secondes en mémoire. Appuie sur " + appController.keyName(appController.config.saveKey) + " pour en faire un clip."
         color: Theme.secondary
         wrapMode: Text.Wrap
     }

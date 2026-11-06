@@ -3,6 +3,7 @@ $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
 Set-Location $root
 $out=Join-Path $root 'dist/ClipForge'
+foreach($stale in @("$out/tools","$out/licenses/Qt-SBOM")){ if(Test-Path $stale){ Remove-Item $stale -Recurse -Force } }
 New-Item -ItemType Directory -Force $out,"$out/obs/bin/64bit","$out/obs/obs-plugins/64bit","$out/obs/data","$out/tools","$out/licenses" | Out-Null
 Copy-Item build/ClipForge.exe $out -Force
 Copy-Item assets/ClipForge.ico $out -Force
@@ -17,7 +18,11 @@ foreach($name in @('obs-ffmpeg','obs-x264','win-capture','win-wasapi','obs-qsv11
  if(Test-Path ".deps/obs/data/obs-plugins/$name"){New-Item -ItemType Directory -Force "$out/obs/data/obs-plugins" | Out-Null;Copy-Item ".deps/obs/data/obs-plugins/$name" "$out/obs/data/obs-plugins" -Recurse -Force}
 }
 Copy-Item .deps/obs/data/libobs "$out/obs/data" -Recurse -Force
-foreach($tool in @('ffmpeg','ffprobe')) { $command=Get-Command "$tool.exe";Copy-Item $command.Source "$out/tools/$tool.exe" -Force }
+# Shared FFmpeg build: ffmpeg.exe and ffprobe.exe are tiny and use one set of DLLs (the static build stored ~150 MB twice).
+# .deps/ffmpeg-mini is our trimmed build (only the codecs/filters ClipForge uses); .deps/ffmpeg-shared is the full gyan build.
+$ffDir=if(Test-Path .deps/ffmpeg-mini/bin){'.deps/ffmpeg-mini/bin'}elseif(Test-Path .deps/ffmpeg-shared/bin){'.deps/ffmpeg-shared/bin'}else{$null}
+if($ffDir){ Copy-Item "$ffDir/*" "$out/tools" -Force }
+else { foreach($tool in @('ffmpeg','ffprobe')) { $command=Get-Command "$tool.exe";Copy-Item $command.Source "$out/tools/$tool.exe" -Force } }
 & .deps/Qt/6.8.3/msvc2022_64/bin/windeployqt.exe --release --no-translations --qmldir "$root/ui" "$out/ClipForge.exe"
 if($LASTEXITCODE){throw 'Qt deployment failed.'}
 $vs=& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products '*' -property installationPath
@@ -35,10 +40,15 @@ Copy-Item .deps/obs-source/obs-studio-32.2.2-sources/COPYING "$out/licenses/OBS-
 if(Test-Path .deps/release-notices/qt-everywhere-src-6.8.3/qtbase/LICENSES){
  Copy-Item .deps/release-notices/qt-everywhere-src-6.8.3/qtbase/LICENSES "$out/licenses/Qt" -Recurse -Force
  Copy-Item .deps/release-notices/ffmpeg-7.1.1 "$out/licenses/FFmpeg" -Recurse -Force
- Copy-Item .deps/Qt/6.8.3/msvc2022_64/sbom "$out/licenses/Qt-SBOM" -Recurse -Force
  & "$out/tools/ffmpeg.exe" -version | Set-Content "$out/licenses/FFmpeg-build.txt" -Encoding utf8
 }
 Copy-Item docs "$out/docs" -Recurse -Force
+# De-duplicate: DLLs identical to the root copy are resolved from the app folder. Only the graphics modules OBS loads by path must stay in obs/bin/64bit.
+foreach($dup in Get-ChildItem "$out/obs/bin/64bit" -Filter '*.dll' -File){
+ if($dup.Name -in @('libobs-d3d11.dll','libobs-opengl.dll')){continue}
+ $rootCopy=Join-Path $out $dup.Name
+ if((Test-Path $rootCopy) -and ((Get-FileHash $rootCopy).Hash -eq (Get-FileHash $dup.FullName).Hash)){Remove-Item $dup.FullName -Force}
+}
 @('[Paths]','Plugins=.','QmlImports=qml') | Set-Content "$out/qt.conf" -Encoding ascii
 $files=Get-ChildItem $out -Recurse -File
 Write-Host ('Package size: {0:N0} MB in {1} files' -f (($files|Measure-Object Length -Sum).Sum/1MB),$files.Count)

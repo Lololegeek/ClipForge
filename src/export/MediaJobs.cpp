@@ -145,6 +145,9 @@ double MediaJobs::outputDuration(const EditProject &p) {
 }
 QStringList MediaJobs::exportArguments(const EditProject &p, QString dest, const ExportOptions &o) {
     QStringList a{"-v", "error", "-nostdin", "-y", "-i", p.source};
+    const bool watermark = !o.watermark.isEmpty();
+    if (watermark)
+        a << "-i" << o.watermark;
     const bool animated = o.format == "gif" || o.format == "webp";
     const bool audio = p.hasAudio && !animated;
     int height = o.height, kbps = 0;
@@ -215,8 +218,18 @@ QStringList MediaJobs::exportArguments(const EditProject &p, QString dest, const
     }
     const QString tail = post.isEmpty() ? QString() : "," + post.join(',');
     filters << joins + QString("concat=n=%1:v=1:a=%2[c]").arg(p.segments.size()).arg(audio ? 1 : 0) +
-                   (audio ? "[a]" : "");
-    if (o.format == "gif")
+                   (audio ? (o.normalize ? "[an];[an]loudnorm=I=-16:TP=-1.5:LRA=11[a]" : "[a]") : "");
+    if (watermark) {
+        // The badge is drawn for a 1080p frame (1920 for 9:16); scale it with the output height.
+        const double factor = height > 0 ? std::clamp(height / (o.vertical ? 1920.0 : 1080.0), 0.25, 3.0) : 1.0;
+        filters << QString("[1:v]format=rgba,scale=trunc(iw*%1/2)*2:-2[wm]").arg(factor, 0, 'f', 4);
+        const QString x = (o.watermarkCorner % 2 == 0) ? "W*0.02" : "W-w-W*0.02";
+        const QString y = (o.watermarkCorner < 2) ? "H*0.03" : "H-h-H*0.03";
+        filters << "[c]null" + tail + "[b]";
+        filters << QString("[b][wm]overlay=%1:%2:format=auto%3").arg(x, y, o.format == "gif" ? "[o]" : "[v]");
+        if (o.format == "gif")
+            filters << "[o]split[g1][g2];[g1]palettegen=stats_mode=diff[pal];[g2][pal]paletteuse=dither=bayer:bayer_scale=4[v]";
+    } else if (o.format == "gif")
         filters << "[c]null" + tail +
                        ",split[g1][g2];[g1]palettegen=stats_mode=diff[pal];[g2][pal]paletteuse=dither=bayer:bayer_scale=4[v]";
     else
@@ -285,9 +298,11 @@ bool MediaJobs::exportVideo(EditProject project, QString dest, ExportOptions o) 
     });
     connect(p, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
             [this, p, dest](int code, QProcess::ExitStatus status) {
-                bool ok = code == 0 && status == QProcess::NormalExit && QFileInfo(exportTemp_).size() > 0 &&
-                          QFile::rename(exportTemp_, dest);
-                if (ok) {
+                bool ok = !exportCancelled_ && code == 0 && status == QProcess::NormalExit &&
+                          QFileInfo(exportTemp_).size() > 0 && QFile::rename(exportTemp_, dest);
+                if (exportCancelled_) {
+                    QFile::remove(exportTemp_);
+                } else if (ok) {
                     emit exportProgress(1);
                     emit exported(dest);
                 } else {
@@ -296,12 +311,20 @@ bool MediaJobs::exportVideo(EditProject project, QString dest, ExportOptions o) 
                     QFile::remove(exportTemp_);
                 }
                 exportTemp_.clear();
+                exportCancelled_ = false;
                 exporter_ = nullptr;
                 emit exportBusy(false);
                 p->deleteLater();
             });
+    exportCancelled_ = false;
     p->start(tool("ffmpeg"), exportArguments(project, exportTemp_, o));
     return true;
+}
+void MediaJobs::cancelExport() {
+    if (!exporter_)
+        return;
+    exportCancelled_ = true;
+    exporter_->kill();
 }
 void MediaJobs::trimTail(QString path, double seconds) {
     const QFileInfo f(path);

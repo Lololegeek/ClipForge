@@ -180,7 +180,7 @@ ApplicationWindow {
                         font.pixelSize: 12
                     }
                     ActionButton {
-                        text: "Sauvegarder · F" + (appController.config.saveKey - 111)
+                        text: "Sauvegarder · " + appController.keyName(appController.config.saveKey)
                         primary: true
                         enabled: ["Buffering", "Saving", "Recording"].indexOf(appController.state) >= 0
                         onClicked: appController.saveReplay()
@@ -211,12 +211,50 @@ ApplicationWindow {
                     anchors.margins: 9
                     anchors.leftMargin: 30
                     anchors.rightMargin: 30
-                    text: appController.message || ("F" + (appController.config.saveKey - 111) + " sauvegarde un clip · Maj+F" + (appController.config.saveKey - 111) + " garde tout le replay")
+                    text: appController.message || (appController.keyName(appController.config.saveKey) + " sauvegarde un clip · " + appController.keyName(appController.config.saveKey | 0x40000) + " garde tout le replay")
                     color: Theme.secondary
                     font.pixelSize: 12
                     wrapMode: Text.Wrap
                 }
             }
         }
+    }
+    // Shown once on first launch.
+    property bool onboardingDone: false
+    Onboarding {
+        anchors.fill: parent
+        z: 1000
+        visible: !appController.config.onboarded && !window.onboardingDone
+        onVisibleChanged: if (visible)
+            forceActiveFocus()
+        onFinished: window.onboardingDone = true
+    }
+    // Update window: opens by itself once per version when an update is found, and again when it is ready.
+    property string updateSeen: ""
+    function previewUpdate() { // used by --screenshot with CF_UPDATE_DIALOG
+        updateDialog.open();
+    }
+    function showUpdate() {
+        if (appController.updateVersion.length)
+            updateDialog.open();
+    }
+    function maybeShowUpdate() {
+        const st = appController.updateState;
+        if (st !== "available" && st !== "ready")
+            return;
+        const key = appController.updateVersion + ":" + st;
+        if (window.updateSeen === key || (!appController.config.onboarded && !window.onboardingDone))
+            return;
+        window.updateSeen = key;
+        updateDialog.open();
+    }
+    Connections {
+        target: appController
+        function onChanged() {
+            window.maybeShowUpdate();
+        }
+    }
+    UpdateDialog {
+        id: updateDialog
     }
 }
