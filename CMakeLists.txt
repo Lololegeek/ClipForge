@@ -32,7 +32,7 @@ target_include_directories(clipforge_core PUBLIC src)
 target_link_libraries(clipforge_core PUBLIC Qt6::Core Qt6::Gui Qt6::Sql Qt6::Multimedia obs user32 shell32 psapi ole32 version)
 qt_add_executable(ClipForge WIN32 src/app/main.cpp src/app/Controller.cpp src/app/Controller.h
  src/app/Updater.cpp src/app/Updater.h src/app/Overlay.cpp src/app/Overlay.h src/app/CaptureActions.cpp src/app/LibraryActions.cpp src/app/EditActions.cpp src/app/GameProfiles.cpp src/app/Diagnostics.cpp)
-target_compile_definitions(ClipForge PRIVATE CF_VERSION="${PROJECT_VERSION}" CF_VERSION_LABEL="1.0 Beta Test 21")
+target_compile_definitions(ClipForge PRIVATE CF_VERSION="${PROJECT_VERSION}" CF_VERSION_LABEL="1.0 Beta Test 22")
 configure_file(packaging/windows.rc.in "${CMAKE_BINARY_DIR}/windows.rc" @ONLY)
 set_source_files_properties("${CMAKE_BINARY_DIR}/windows.rc" PROPERTIES
   OBJECT_DEPENDS "${CMAKE_SOURCE_DIR}/assets/ClipForge.ico")
