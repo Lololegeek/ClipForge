@@ -4,12 +4,42 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QLocale>
+#include <QPainter>
+#include <QPainterPath>
 #include <QStandardPaths>
 #include <QUuid>
 namespace cf {
 namespace {
-// Fades a title in, keeps it about three seconds, then fades it out.
-const QString kTitleAlpha = "'if(lt(t,0.4),t/0.4,if(lt(t,3.2),1,if(lt(t,3.8),(3.8-t)/0.6,0)))'";
+// The bundled ffmpeg is a slim build (no drawtext, no lavfi): titles are drawn here as transparent pictures
+// laid over the clip, and silence comes from a small raw PCM file looped as needed.
+constexpr double kTitleSeconds = 3.8;
+bool drawTitle(const QString &path, const QString &title, const QString &subtitle) {
+    QImage img(1920, 1080, QImage::Format_ARGB32_Premultiplied);
+    img.fill(Qt::transparent);
+    QPainter p(&img);
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setRenderHint(QPainter::TextAntialiasing);
+    // Soft dark band at the bottom so white text stays readable on bright clips.
+    QLinearGradient shade(0, 700, 0, 1080);
+    shade.setColorAt(0, QColor(0, 0, 0, 0));
+    shade.setColorAt(1, QColor(0, 0, 0, 150));
+    p.fillRect(0, 700, 1920, 380, shade);
+    auto text = [&p](const QString &s, int pixelSize, int weight, int x, int y, int alpha, int offset) {
+        QFont f("Segoe UI");
+        f.setPixelSize(pixelSize);
+        f.setWeight(QFont::Weight(weight));
+        p.setFont(f);
+        const QString line = QFontMetrics(f).elidedText(s, Qt::ElideRight, 1920 - 2 * x);
+        p.setPen(QColor(0, 0, 0, 170));
+        p.drawText(x + offset, y + offset, line);
+        p.setPen(QColor(255, 255, 255, alpha));
+        p.drawText(x, y, line);
+    };
+    text(title, 64, QFont::Bold, 72, 905, 255, 3);
+    text(subtitle, 34, QFont::Normal, 74, 965, 235, 2);
+    p.end();
+    return img.save(path);
+}
 const QString kFrame = "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
                        "setsar=1,fps=30,format=yuv420p";
 QStringList encoderArgs() {
@@ -43,13 +73,12 @@ bool SlideshowExport::start(const QVariantList &clips, const QImage &recap, cons
     current_ = -1;
     total_ = elapsed_ = 0;
     cancelled_ = false;
-    // Fonts are copied next to the parts so the filter only needs plain relative names (no drive-letter escaping).
-    const QString fonts = QStandardPaths::writableLocation(QStandardPaths::FontsLocation);
-    const QString windowsFonts = qEnvironmentVariable("WINDIR", "C:/Windows") + "/Fonts";
-    titles_ = QFile::copy(windowsFonts + "/segoeuib.ttf", dir_ + "/title.ttf") &&
-              QFile::copy(windowsFonts + "/segoeui.ttf", dir_ + "/sub.ttf");
+    // One second of 48 kHz stereo silence, looped for silent clips and the recap.
+    QFile silence(dir_ + "/silence.raw");
+    titles_ = silence.open(QIODevice::WriteOnly) && silence.write(QByteArray(48000 * 4, '\0')) == 48000 * 4;
+    silence.close();
     if (!titles_)
-        titles_ = QFile::copy(fonts + "/segoeuib.ttf", dir_ + "/title.ttf") && QFile::copy(fonts + "/segoeui.ttf", dir_ + "/sub.ttf");
+        return false;
     const QLocale fr(QLocale::French, QLocale::France);
     const int count = int(clips.size());
     for (int i = 0; i < count; ++i) {
@@ -132,36 +161,27 @@ void SlideshowExport::encode(bool audio) {
     const Part &part = parts_[current_];
     const QString out = QString("part-%1.mp4").arg(current_, 4, 10, QChar('0'));
     QStringList a{"-v", "error", "-nostdin", "-y"};
-    QString video;
+    const QStringList silence{"-f", "s16le", "-ar", "48000", "-ac", "2", "-stream_loop", "-1", "-i", "silence.raw"};
+    const QString seconds = QString::number(part.still ? kRecapSeconds : part.seconds, 'f', 3);
     if (part.still) {
-        a << "-loop" << "1" << "-framerate" << "30" << "-t" << QString::number(kRecapSeconds) << "-i" << part.path;
-        a << "-f" << "lavfi" << "-t" << QString::number(kRecapSeconds) << "-i" << "anullsrc=r=48000:cl=stereo";
-        video = "[0:v]" + kFrame + ",fade=t=in:st=0:d=0.6[v]";
-        a << "-filter_complex" << video << "-map" << "[v]" << "-map" << "1:a" << "-t" << QString::number(kRecapSeconds);
+        a << "-loop" << "1" << "-framerate" << "30" << "-t" << seconds << "-i" << part.path << silence;
+        a << "-filter_complex" << "[0:v]" + kFrame + ",fade=t=in:st=0:d=0.6[v]" << "-map" << "[v]" << "-map" << "1:a";
     } else {
         a << "-i" << part.path;
+        const QString n = QString::number(current_);
+        const bool title = drawTitle(dir_ + "/title-" + n + ".png", part.title, part.subtitle);
+        if (title)
+            a << "-loop" << "1" << "-framerate" << "30" << "-t" << QString::number(kTitleSeconds) << "-i" << "title-" + n + ".png";
         if (!audio)
-            a << "-f" << "lavfi" << "-i" << "anullsrc=r=48000:cl=stereo";
-        video = "[0:v:0]" + kFrame + ",fade=t=in:st=0:d=0.25";
-        if (titles_) {
-            const QString n = QString::number(current_);
-            QFile title(dir_ + "/title-" + n + ".txt"), subtitle(dir_ + "/sub-" + n + ".txt");
-            if (title.open(QIODevice::WriteOnly) && subtitle.open(QIODevice::WriteOnly)) {
-                title.write(part.title.toUtf8());
-                subtitle.write(part.subtitle.toUtf8());
-                title.close();
-                subtitle.close();
-                video += ",drawtext=fontfile=title.ttf:textfile=title-" + n +
-                         ".txt:fontsize=64:fontcolor=white:shadowcolor=black@0.7:shadowx=3:shadowy=3:x=72:y=h-230:alpha=" +
-                         kTitleAlpha;
-                video += ",drawtext=fontfile=sub.ttf:textfile=sub-" + n +
-                         ".txt:fontsize=34:fontcolor=white@0.92:shadowcolor=black@0.7:shadowx=2:shadowy=2:x=74:y=h-145:alpha=" +
-                         kTitleAlpha;
-            }
-        }
+            a << silence;
+        QString video = "[0:v:0]" + kFrame + ",fade=t=in:st=0:d=0.25";
+        if (title)
+            video += "[base];[1:v]format=rgba,fade=t=in:st=0:d=0.4:alpha=1,fade=t=out:st=3.2:d=0.6:alpha=1[t];"
+                     "[base][t]overlay=0:0:eof_action=pass:format=auto,format=yuv420p";
         video += "[v]";
-        a << "-filter_complex" << video << "-map" << "[v]" << "-map" << (audio ? "0:a:0" : "1:a") << "-shortest";
+        a << "-filter_complex" << video << "-map" << "[v]" << "-map" << (audio ? "0:a:0" : QString::number(title ? 2 : 1) + ":a");
     }
+    a << "-t" << seconds;
     a << encoderArgs() << "-progress" << "pipe:1" << out;
     auto *p = launch(tool("ffmpeg"), a);
     connect(p, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
