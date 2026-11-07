@@ -73,3 +73,5 @@ Desktop.ini
 /.playwright-cli/
 
 video-agent/.env
+video-agent/
+.claude
