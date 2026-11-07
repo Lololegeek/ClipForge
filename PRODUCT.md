@@ -1,49 +1,39 @@
 # ClipForge
 
-## Register
+register: product
 
-product
+what it is: windows app, replay buffer stays on locally, F8 saves a clip, library to find / trim / export. offline, no account, no cloud.
 
-## Purpose
+users: windows gamers who want to keep a moment with F8 without alt-tabbing or signing up for anything.
 
-Windows desktop app. It keeps a local replay buffer, saves clips on F8, and provides a library to find, trim and export them. Offline only: no account, no cloud.
+goals
+- keep the replay buffer running
+- save clips that actually play
+- find them in the library
+- trim + export, offline
 
-## Users
+ui
+- french, short labels
+- capture state always visible somewhere
 
-Windows gamers who save a moment with F8 without leaving the game or creating an account.
+not doing
+- web dashboard
+- social feed
+- ads
+- made-up stats
+- default Qt look
+- copying Medal's artwork
 
-## Goals
+rules of thumb
+- capture reliability > everything else
+- one save action, F8
+- originals stay reachable
+- if something falls back, say so
+- unsupported stuff gets disabled, not hidden
 
-- Keep a local replay buffer running.
-- Save playable clips.
-- Find clips in a library.
-- Trim and export clips offline.
-
-## Interface
-
-French UI. Short labels. The capture state is always visible.
-
-## Out of scope
-
-- Web dashboard
-- Social feed
-- Advertising
-- Invented statistics
-- Default Qt widget look
-- Reproduction of Medal artwork
-
-## Principles
-
-- Capture reliability comes first.
-- One clear save action (F8).
-- Original videos stay accessible.
-- Fallbacks are explained to the user.
-- Unsupported operations are disabled explicitly.
-
-## Accessibility
-
-- Keyboard focus
-- Readable contrast
-- Windows DPI scaling
-- States shown as text as well as color
-- Limited motion
+a11y
+- keyboard focus works
+- contrast readable
+- windows DPI scaling
+- state is text too, not just color
+- little motion
