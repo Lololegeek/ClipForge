@@ -29,7 +29,7 @@ export function SiteHeader() {
           ClipForge
         </Link>
 
-        <nav aria-label="Principal" className="ml-auto hidden items-center gap-1 md:flex">
+        <nav aria-label="Principal" className="ml-auto hidden items-center gap-1 xl:flex">
           {SECTIONS.filter((s) => s.id !== "telecharger").map((s) => {
             const active = pathname.startsWith(s.href.slice(0, -1));
             return (
@@ -66,7 +66,7 @@ export function SiteHeader() {
           </Link>
         </nav>
 
-        <div className="ml-auto flex items-center gap-2 md:ml-2">
+        <div className="ml-auto flex items-center gap-2 xl:ml-2">
           <CommandMenu />
           <Button asChild variant="ghost" size="sm" className="size-9 px-0">
             <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer" aria-label="Discord ClipForge">
@@ -88,7 +88,7 @@ export function SiteHeader() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="size-9 px-0 md:hidden"
+                className="size-9 px-0 xl:hidden"
                 aria-label="Ouvrir le menu"
               >
                 <Menu />

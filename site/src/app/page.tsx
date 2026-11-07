@@ -1,4 +1,5 @@
 import { AppTour } from "@/components/app-tour";
+import { CompareSection } from "@/components/compare-section";
 import { DownloadSection } from "@/components/download-panel";
 import { FaqSection } from "@/components/faq-section";
 import { Hero } from "@/components/hero";
@@ -21,7 +22,8 @@ export default function Home() {
           <SectionTitle>L’application.</SectionTitle>
           <p className="text-muted max-w-md text-lg">
             Une barre latérale, six pages, l’état de la capture toujours visible. Le thème sombre
-            est pensé pour être consulté pendant que le jeu tourne. Explore les captures de chaque écran.
+            est pensé pour être consulté pendant que le jeu tourne. Explore les captures de chaque
+            écran.
           </p>
         </div>
         <Reveal className="mt-12">
@@ -29,6 +31,7 @@ export default function Home() {
         </Reveal>
       </Section>
       <TechSection />
+      <CompareSection />
       <LimitsSection />
       <FaqSection />
       <DownloadSection />
