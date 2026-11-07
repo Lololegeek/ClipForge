@@ -503,78 +503,176 @@ FocusScope {
             }
         }
         // Summary of everything once the slides are over.
-        ColumnLayout {
+        SummaryView {
             anchors.centerIn: parent
             width: Math.min(parent.width - 64, 980)
             visible: show.statPage >= show.slides.length
-            spacing: 22
-            Text {
-                Layout.fillWidth: true
-                horizontalAlignment: Text.AlignHCenter
-                text: "Ton récap"
-                color: "white"
-                font.pixelSize: 44
-                font.weight: Font.Black
+            slides: show.slides
+            wide: show.width > 900
+            onReplayRequested: show.replay()
+            onCloseRequested: show.close()
+            onImageRequested: show.captureRecap(function (img) {
+                appController.saveRecapImage(img);
+            })
+            onVideoRequested: show.captureRecap(function (img) {
+                appController.exportSlideshow(show.clips, img);
+            })
+        }
+    }
+
+    // Same summary laid out for a 1920x1080 picture (recap image and last part of the exported video).
+    Rectangle {
+        id: capture
+        x: -20000
+        width: 1280
+        height: 720
+        visible: false
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop {
+                position: 0
+                color: show.palettes[show.palettes.length - 1][0]
             }
-            GridLayout {
-                Layout.fillWidth: true
-                columns: show.width > 900 ? 3 : 2
-                rowSpacing: 14
-                columnSpacing: 14
-                Repeater {
-                    model: show.slides
-                    delegate: Rectangle {
-                        required property var modelData
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 130
-                        radius: 16
-                        color: "#33000000"
-                        border.color: "#40ffffff"
-                        ColumnLayout {
-                            anchors.fill: parent
-                            anchors.margins: 16
-                            spacing: 4
-                            Text {
-                                Layout.fillWidth: true
-                                text: modelData.kicker
-                                color: "#ccffffff"
-                                font.pixelSize: 13
-                                font.capitalization: Font.AllUppercase
-                                elide: Text.ElideRight
-                            }
-                            Text {
-                                Layout.fillWidth: true
-                                text: modelData.big
-                                color: "white"
-                                font.pixelSize: 26
-                                font.weight: Font.Bold
-                                elide: Text.ElideRight
-                            }
-                            Text {
-                                Layout.fillWidth: true
-                                text: modelData.small
-                                color: "#e6ffffff"
-                                font.pixelSize: 13
-                                wrapMode: Text.Wrap
-                                maximumLineCount: 2
-                                elide: Text.ElideRight
-                            }
+            GradientStop {
+                position: 1
+                color: show.palettes[show.palettes.length - 1][1]
+            }
+        }
+        SummaryView {
+            anchors.centerIn: parent
+            width: parent.width - 120
+            slides: show.slides
+            wide: true
+            forImage: true
+        }
+        Text {
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.margins: 24
+            text: "ClipForge"
+            color: "#b3ffffff"
+            font.pixelSize: 18
+            font.weight: Font.Bold
+        }
+    }
+    // Used by the screenshot test: video exports the first `limit` clips.
+    function exportRecap(video, limit) {
+        captureRecap(function (img) {
+            if (video)
+                appController.exportSlideshow(limit ? show.clips.slice(0, limit) : show.clips, img);
+            else
+                appController.saveRecapImage(img);
+        });
+    }
+    function captureRecap(done) {
+        capture.visible = true;
+        capture.grabToImage(function (result) {
+            capture.visible = false;
+            done(result.image);
+        }, Qt.size(1920, 1080));
+    }
+
+    component SummaryView: ColumnLayout {
+        id: summary
+        property var slides: []
+        property bool wide: true
+        property bool forImage: false
+        signal replayRequested
+        signal closeRequested
+        signal imageRequested
+        signal videoRequested
+        spacing: 22
+        Text {
+            Layout.fillWidth: true
+            horizontalAlignment: Text.AlignHCenter
+            text: "Ton récap"
+            color: "white"
+            font.pixelSize: 44
+            font.weight: Font.Black
+        }
+        GridLayout {
+            Layout.fillWidth: true
+            columns: summary.wide ? 3 : 2
+            rowSpacing: 14
+            columnSpacing: 14
+            Repeater {
+                model: summary.slides
+                delegate: Rectangle {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 130
+                    radius: 16
+                    color: "#33000000"
+                    border.color: "#40ffffff"
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 16
+                        spacing: 4
+                        Text {
+                            Layout.fillWidth: true
+                            text: modelData.kicker
+                            color: "#ccffffff"
+                            font.pixelSize: 13
+                            font.capitalization: Font.AllUppercase
+                            elide: Text.ElideRight
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            text: modelData.big
+                            color: "white"
+                            font.pixelSize: 26
+                            font.weight: Font.Bold
+                            elide: Text.ElideRight
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            text: modelData.small
+                            color: "#e6ffffff"
+                            font.pixelSize: 13
+                            wrapMode: Text.Wrap
+                            maximumLineCount: 2
+                            elide: Text.ElideRight
                         }
                     }
                 }
             }
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter
-                spacing: 12
-                ActionButton {
-                    text: "Revoir le diaporama"
-                    onClicked: show.replay()
-                }
-                ActionButton {
-                    text: "Fermer"
-                    primary: true
-                    onClicked: show.close()
-                }
+        }
+        Flow {
+            Layout.fillWidth: true
+            Layout.preferredHeight: implicitHeight
+            visible: !summary.forImage
+            spacing: 12
+            // Flow cannot center itself: the padding does it.
+            leftPadding: Math.max(0, (width - buttonsWidth) / 2)
+            readonly property real buttonsWidth: {
+                var w = 0;
+                for (var i = 0; i < children.length; ++i)
+                    if (children[i].visible)
+                        w += children[i].width + spacing;
+                return Math.max(0, w - spacing);
+            }
+            ActionButton {
+                text: "Revoir le diaporama"
+                onClicked: summary.replayRequested()
+            }
+            ActionButton {
+                text: "Enregistrer l'image"
+                onClicked: summary.imageRequested()
+            }
+            ActionButton {
+                text: appController.slideshowBusy ? "Export vidéo… " + Math.round(appController.slideshowProgress * 100) + " %" : "Exporter en vidéo"
+                enabled: !appController.slideshowBusy
+                onClicked: summary.videoRequested()
+            }
+            ActionButton {
+                visible: appController.slideshowBusy
+                text: "Annuler l'export"
+                onClicked: appController.cancelSlideshowExport()
+            }
+            ActionButton {
+                text: "Fermer"
+                primary: true
+                onClicked: summary.closeRequested()
             }
         }
     }

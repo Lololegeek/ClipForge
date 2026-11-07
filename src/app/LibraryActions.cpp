@@ -7,6 +7,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
+#include <QImage>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QMenu>
@@ -245,6 +246,35 @@ void Controller::uploadToDiscord(QString p, QString clip, bool automatic, bool r
         reply->deleteLater();
         net->deleteLater();
     });
+}
+QString Controller::recapFolder() {
+    const QString dir = settings_.clips + "/Récaps";
+    QDir().mkpath(dir);
+    return dir;
+}
+void Controller::saveRecapImage(QVariant image) {
+    const QImage img = image.value<QImage>();
+    const QString path = recapFolder() + "/Récap ClipForge " + QDateTime::currentDateTime().toString("yyyy-MM-dd HH'h'mm") + ".png";
+    if (img.isNull() || !img.save(path)) {
+        notify("Impossible d'enregistrer l'image du récap.", true);
+        return;
+    }
+    QApplication::clipboard()->setImage(img);
+    notify("Récap enregistré et copié : colle-le directement dans Discord (cliquez pour l'ouvrir)");
+    notifyClip_ = path;
+}
+void Controller::exportSlideshow(QVariantList clips, QVariant recapImage) {
+    if (slideshow_.busy())
+        return;
+    const QString dest =
+        recapFolder() + "/Diaporama ClipForge " + QDateTime::currentDateTime().toString("yyyy-MM-dd HH'h'mm") + ".mp4";
+    slideshowProgress_ = 0;
+    if (!slideshow_.start(clips, recapImage.value<QImage>(), dest)) {
+        notify("Impossible de lancer l'export du diaporama.", true);
+        return;
+    }
+    notify("Export du diaporama lancé, tu peux continuer à utiliser ClipForge.");
+    emit changed();
 }
 void Controller::copyPath(QString p) {
     QApplication::clipboard()->setText(p);

@@ -168,13 +168,29 @@ int main(int argc, char **argv) {
                     auto show = window->findChild<QObject *>("slideshow");
                     if (show && step != "play")
                         QMetaObject::invokeMethod(show, "end");
-                    if (show && step == "summary")
+                    if (show && step != "play" && step != "recap")
                         show->setProperty("statPage", show->property("slides").toList().size());
+                    // image: saves the recap picture; video: exports the first three clips + recap, then quits.
+                    if (show && (step == "image" || step == "video"))
+                        QTimer::singleShot(800, show, [show, step] {
+                            QMetaObject::invokeMethod(show, "exportRecap", Q_ARG(QVariant, step == "video"), Q_ARG(QVariant, 3));
+                        });
                 });
             if (qEnvironmentVariableIsSet("CF_UPDATE_DIALOG"))
                 QTimer::singleShot(1200, window, [window] { QMetaObject::invokeMethod(window, "previewUpdate"); });
             QTimer::singleShot(2200, &app, [window, data] { window->grabWindow().save(data + "/ui.png"); });
-            QTimer::singleShot(3000, &app, &QApplication::quit);
+            if (qEnvironmentVariable("CF_SLIDESHOW") == "video") {
+                auto poll = new QTimer(&app);
+                QObject::connect(poll, &QTimer::timeout, &app, [&controller, started = std::make_shared<bool>(false)] {
+                    if (controller.slideshowBusy())
+                        *started = true;
+                    else if (*started)
+                        QApplication::quit();
+                });
+                poll->start(500);
+            } else {
+                QTimer::singleShot(3000, &app, &QApplication::quit);
+            }
         }
         if (args.contains("--ui-test")) {
             for (int page = 0; page < 6; ++page) {

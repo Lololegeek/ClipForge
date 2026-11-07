@@ -1,6 +1,7 @@
 #pragma once
 #include "capture/ObsEngine.h"
 #include "export/MediaJobs.h"
+#include "export/SlideshowExport.h"
 #include "hotkeys/GlobalHotkeys.h"
 #include "Updater.h"
 #include "library/ClipModel.h"
@@ -36,6 +37,8 @@ class Controller : public QObject {
     Q_PROPERTY(QVariantList segments READ segments NOTIFY editChanged)
     Q_PROPERTY(bool exportBusy READ exportBusy NOTIFY changed)
     Q_PROPERTY(double exportProgress READ exportProgress NOTIFY changed)
+    Q_PROPERTY(bool slideshowBusy READ slideshowBusy NOTIFY changed)
+    Q_PROPERTY(double slideshowProgress READ slideshowProgress NOTIFY changed)
     Q_PROPERTY(QString lastClip READ lastClip NOTIFY changed)
     Q_PROPERTY(QString lastExport READ lastExport NOTIFY changed)
     Q_PROPERTY(QString version READ version CONSTANT)
@@ -109,6 +112,12 @@ class Controller : public QObject {
     }
     double exportProgress() const {
         return progress_;
+    }
+    bool slideshowBusy() const {
+        return slideshow_.busy();
+    }
+    double slideshowProgress() const {
+        return slideshowProgress_;
     }
     QString lastClip() const {
         return lastClip_;
@@ -197,6 +206,12 @@ class Controller : public QObject {
     Q_INVOKABLE void copyPath(QString path);
     Q_INVOKABLE void copyFile(QString path);
     Q_INVOKABLE void sendToDiscord(QString path);
+    // Slideshow recap: image is the QImage of an ItemGrabResult. Files go to <clips>/Récaps.
+    Q_INVOKABLE void saveRecapImage(QVariant image);
+    Q_INVOKABLE void exportSlideshow(QVariantList clips, QVariant recapImage);
+    Q_INVOKABLE void cancelSlideshowExport() {
+        slideshow_.cancel();
+    }
     Q_INVOKABLE void addSegment(double in, double out, double speed);
     Q_INVOKABLE void useSegment(double in, double out, double speed);
     Q_INVOKABLE void removeSegment(int index);
@@ -249,6 +264,9 @@ class Controller : public QObject {
     static Settings withProfile(const Settings &base, const QJsonObject &profile);
     ClipModel library_;
     MediaJobs jobs_;
+    SlideshowExport slideshow_;
+    double slideshowProgress_ = 0;
+    QString recapFolder();
     GlobalHotkeys hotkeys_;
     Updater updater_;
     ObsEngine *engine_;

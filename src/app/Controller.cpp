@@ -32,7 +32,7 @@ ULONG CALLBACK powerCallback(PVOID context, ULONG type, PVOID) {
 
 Controller::Controller(QString runtime, QString data, QString tools, bool test)
     : data_(data), settings_(Settings::load(data + "/settings.json")), library_(data + "/library.sqlite"),
-      jobs_(tools, data + "/thumbnails"), updater_(data), engine_(new ObsEngine(runtime, data + "/obs")), test_(test) {
+      jobs_(tools, data + "/thumbnails"), slideshow_(tools), updater_(data), engine_(new ObsEngine(runtime, data + "/obs")), test_(test) {
     qRegisterMetaType<Settings>();
     if (test_) {
         settings_.clips = data_ + "/clips";
@@ -44,6 +44,19 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
         settings_.microphone = "disabled";
         settings_.audio = "system";
     }
+    connect(&slideshow_, &SlideshowExport::progress, this, [this](double v) {
+        slideshowProgress_ = v;
+        emit changed();
+    });
+    connect(&slideshow_, &SlideshowExport::finished, this, [this](QString dest, bool ok, QString error) {
+        if (ok) {
+            notify("Diaporama exporté : " + QFileInfo(dest).fileName() + " (cliquez pour l'ouvrir)");
+            notifyClip_ = dest;
+        } else {
+            notify(error, error != "Export annulé.");
+        }
+        emit changed();
+    });
     engine_->moveToThread(&worker_);
     connect(&worker_, &QThread::started, engine_, &ObsEngine::initialize);
     connect(&worker_, &QThread::finished, engine_, &QObject::deleteLater);
