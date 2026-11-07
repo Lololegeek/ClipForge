@@ -13,6 +13,7 @@
 #include <QVariantMap>
 class QSystemTrayIcon;
 namespace cf {
+void installCrashHandler(const QString &data);
 class Overlay;
 class Controller : public QObject {
     Q_OBJECT
@@ -215,6 +216,7 @@ class Controller : public QObject {
     Q_INVOKABLE void refreshWindows();
     Q_INVOKABLE void configurationFile(bool importing);
     Q_INVOKABLE void chooseClipsFolder();
+    Q_INVOKABLE void createDiagnosticReport();
     Q_INVOKABLE void quit();
     Q_INVOKABLE void setAutostart(bool enabled);
     Q_INVOKABLE void checkForUpdates();
@@ -260,6 +262,7 @@ class Controller : public QObject {
     void toast(const QString &title, const QString &subtitle, int kind);
     bool ready_ = false, recording_ = false, test_ = false, quitting_ = false, autoStarted_ = false, uiOnly_ = false, restartPending_ = false;
     int replayRetries_ = 0;
+    QString notifyClip_; // the clip a click on the Windows notification opens
     QVariantMap metrics_, selected_;
     QVariantList encoders_, targets_, microphones_, games_, gameList_;
     EditProject project_;
@@ -272,6 +275,8 @@ class Controller : public QObject {
     void updateTrayState();
     void connectTray();
     void scheduleReplayRetry();
+    Q_INVOKABLE void resumedFromSleep();
+    void displayChanged();
     // A clip request waits for OBS to write the file: how much of it to keep and when the key was pressed.
     struct PendingClip {
         double keep;

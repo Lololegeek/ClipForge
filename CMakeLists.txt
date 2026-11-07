@@ -31,13 +31,13 @@ add_library(clipforge_core STATIC
 target_include_directories(clipforge_core PUBLIC src)
 target_link_libraries(clipforge_core PUBLIC Qt6::Core Qt6::Gui Qt6::Sql Qt6::Multimedia obs user32 shell32 psapi ole32 version)
 qt_add_executable(ClipForge WIN32 src/app/main.cpp src/app/Controller.cpp src/app/Controller.h
- src/app/Updater.cpp src/app/Updater.h src/app/Overlay.cpp src/app/Overlay.h src/app/CaptureActions.cpp src/app/LibraryActions.cpp src/app/EditActions.cpp src/app/GameProfiles.cpp)
-target_compile_definitions(ClipForge PRIVATE CF_VERSION="${PROJECT_VERSION}" CF_VERSION_LABEL="1.0 Beta Test 15")
+ src/app/Updater.cpp src/app/Updater.h src/app/Overlay.cpp src/app/Overlay.h src/app/CaptureActions.cpp src/app/LibraryActions.cpp src/app/EditActions.cpp src/app/GameProfiles.cpp src/app/Diagnostics.cpp)
+target_compile_definitions(ClipForge PRIVATE CF_VERSION="${PROJECT_VERSION}" CF_VERSION_LABEL="1.0 Beta Test 16")
 configure_file(packaging/windows.rc.in "${CMAKE_BINARY_DIR}/windows.rc" @ONLY)
 set_source_files_properties("${CMAKE_BINARY_DIR}/windows.rc" PROPERTIES
   OBJECT_DEPENDS "${CMAKE_SOURCE_DIR}/assets/ClipForge.ico")
 target_sources(ClipForge PRIVATE "${CMAKE_BINARY_DIR}/windows.rc")
-target_link_libraries(ClipForge PRIVATE clipforge_core Qt6::Widgets Qt6::Quick Qt6::QuickControls2 Qt6::Multimedia Qt6::Network)
+target_link_libraries(ClipForge PRIVATE clipforge_core Qt6::Widgets Qt6::Quick Qt6::QuickControls2 Qt6::Multimedia Qt6::Network dbghelp)
 qt_add_resources(ClipForge ui PREFIX "/" FILES
  ui/App.qml ui/theme/Theme.qml ui/theme/qmldir
  ui/components/ActionButton.qml ui/components/Panel.qml ui/components/CField.qml ui/components/HotkeyField.qml ui/components/CCombo.qml ui/components/CSlider.qml ui/components/CDialog.qml ui/components/CMenu.qml ui/components/CMenuItem.qml ui/components/CMenuSeparator.qml ui/components/Onboarding.qml ui/components/UpdateDialog.qml ui/components/GameDialog.qml ui/components/CCheck.qml

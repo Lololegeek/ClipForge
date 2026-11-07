@@ -125,7 +125,8 @@ void Controller::clipSaved(QString p) {
     clipMarkers_[QFileInfo(p).absoluteFilePath()] = offsets;
     if (settings_.saveSound)
         MessageBeep(MB_OK);
-    notify("Clip sauvegardé : " + QFileInfo(p).fileName());
+    notify("Clip sauvegardé : " + QFileInfo(p).fileName() + " (cliquez pour l'ouvrir)");
+    notifyClip_ = p;
     toast("Clip sauvegardé", QFileInfo(p).fileName(), Overlay::Success);
     if (clip.keep > 0) {
         clipGames_[p] = clip.game;

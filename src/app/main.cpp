@@ -69,6 +69,7 @@ int main(int argc, char **argv) {
     QString data =
         argument("--data-dir", QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
     QDir().mkpath(data);
+    cf::installCrashHandler(data);
     QLockFile lock(data + "/instance.lock");
     const QString pipe = "ClipForge-" + QCryptographicHash::hash(QDir::cleanPath(data).toUtf8(), QCryptographicHash::Sha1).toHex().left(16);
     if (!lock.tryLock(0)) {

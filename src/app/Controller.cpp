@@ -19,7 +19,17 @@
 #include <QTimer>
 #include <QUrl>
 #include <windows.h>
+#include <powrprof.h>
 namespace cf {
+namespace {
+// Called by Windows on its own thread when the PC suspends or resumes.
+ULONG CALLBACK powerCallback(PVOID context, ULONG type, PVOID) {
+    if (type == PBT_APMRESUMEAUTOMATIC || type == PBT_APMRESUMESUSPEND)
+        QMetaObject::invokeMethod(static_cast<Controller *>(context), "resumedFromSleep", Qt::QueuedConnection);
+    return 0;
+}
+} // namespace
+
 Controller::Controller(QString runtime, QString data, QString tools, bool test)
     : data_(data), settings_(Settings::load(data + "/settings.json")), library_(data + "/library.sqlite"),
       jobs_(tools, data + "/thumbnails"), updater_(data), engine_(new ObsEngine(runtime, data + "/obs")), test_(test) {
@@ -143,6 +153,13 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
     uiOnly_ = cli.contains("--ui-test") || cli.contains("--editor-test") || cli.contains("--screenshot");
     if (!test_ && !uiOnly_) {
         connectTray();
+        static HPOWERNOTIFY powerHandle = nullptr;
+        if (!powerHandle) {
+            DEVICE_NOTIFY_SUBSCRIBE_PARAMETERS params{powerCallback, this};
+            RegisterSuspendResumeNotification(&params, DEVICE_NOTIFY_CALLBACK);
+        }
+        if (auto *screen = QGuiApplication::primaryScreen())
+            connect(screen, &QScreen::geometryChanged, this, &Controller::displayChanged);
         overlay_ = new Overlay;
         connect(&hotkeys_, &GlobalHotkeys::save, this, &Controller::saveReplay);
         connect(&hotkeys_, &GlobalHotkeys::saveFull, this, &Controller::saveFull);
@@ -202,6 +219,13 @@ void Controller::connectTray() {
         if (r == QSystemTrayIcon::DoubleClick)
             emit showWindow();
     });
+    connect(tray_, &QSystemTrayIcon::messageClicked, this, [this] {
+        // Clicking the "Clip sauvegardé" notification plays the clip; other notices just open the window.
+        if (!notifyClip_.isEmpty() && QFileInfo::exists(notifyClip_))
+            QDesktopServices::openUrl(QUrl::fromLocalFile(notifyClip_));
+        else
+            emit showWindow();
+    });
     connect(tray_, &QObject::destroyed, menu, &QObject::deleteLater);
     tray_->show();
     updateTrayState();
@@ -215,6 +239,51 @@ void Controller::scheduleReplayRetry() {
         if (state_ == "Error" && !quitting_)
             start();
     });
+}
+void Controller::resumedFromSleep() {
+    qInfo("Sortie de veille détectée");
+    if (!settings_.alwaysReplay || test_ || uiOnly_ || quitting_ || state_ == "Initializing" || state_ == "Saving")
+        return;
+    // After sleep the graphics driver often invalidates the capture: restart it cleanly once the PC is awake.
+    QTimer::singleShot(5000, this, [this] {
+        if (quitting_)
+            return;
+        replayRetries_ = 0;
+        if (state_ == "Idle" || state_ == "Error") {
+            start();
+            return;
+        }
+        if (state_ == "Buffering") {
+            stop();
+            QTimer::singleShot(3000, this, [this] {
+                if (!quitting_ && (state_ == "Idle" || state_ == "Error"))
+                    start();
+            });
+            notify("Retour de veille : l'Instant Replay a été relancé.");
+        }
+    });
+}
+void Controller::displayChanged() {
+    if (!settings_.alwaysReplay || !settings_.native() || test_ || uiOnly_ || quitting_ || state_ != "Buffering")
+        return;
+    qInfo("Changement de résolution détecté");
+    // Debounced: Windows fires several events during a mode switch.
+    static QTimer *debounce = nullptr;
+    if (!debounce) {
+        debounce = new QTimer(this);
+        debounce->setSingleShot(true);
+        connect(debounce, &QTimer::timeout, this, [this] {
+            if (state_ != "Buffering")
+                return;
+            stop();
+            QTimer::singleShot(3000, this, [this] {
+                if (!quitting_ && (state_ == "Idle" || state_ == "Error"))
+                    start();
+            });
+            notify("Résolution modifiée : l'Instant Replay a été relancé.");
+        });
+    }
+    debounce->start(2500);
 }
 bool Controller::gate(QElapsedTimer &t, int ms) {
     if (t.isValid() && t.elapsed() < ms)
@@ -237,6 +306,7 @@ void Controller::notify(QString s, bool error) {
         return;
     }
     qInfo().noquote() << (error ? "ERROR: " : "INFO: ") + s;
+    notifyClip_.clear();
     if (tray_)
         tray_->showMessage("ClipForge", s, error ? QSystemTrayIcon::Warning : QSystemTrayIcon::Information,
                            3500);

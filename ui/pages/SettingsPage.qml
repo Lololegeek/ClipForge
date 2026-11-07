@@ -648,6 +648,10 @@ ColumnLayout {
                     text: "Exporter les réglages"
                     onClicked: appController.configurationFile(false)
                 }
+                ActionButton {
+                    text: "Créer un rapport de diagnostic"
+                    onClicked: appController.createDiagnosticReport()
+                }
             }
             Text {
                 Layout.topMargin: 16
