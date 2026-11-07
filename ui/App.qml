@@ -257,4 +257,16 @@ ApplicationWindow {
     UpdateDialog {
         id: updateDialog
     }
+    // Clips played one after another, then a recap of the collection.
+    function startSlideshow() {
+        var list = clipLibrary.playlist();
+        if (list.length)
+            slideshow.start(list);
+    }
+    Slideshow {
+        id: slideshow
+        objectName: "slideshow"
+        anchors.fill: parent
+        z: 900
+    }
 }

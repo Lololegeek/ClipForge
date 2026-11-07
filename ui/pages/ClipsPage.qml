@@ -99,6 +99,12 @@ ColumnLayout {
             Layout.fillWidth: true
         }
         ActionButton {
+            text: "Diaporama"
+            primary: true
+            enabled: clipLibrary.count > 0
+            onClicked: window.startSlideshow()
+        }
+        ActionButton {
             text: "Importer"
             onClicked: appController.importVideos()
         }

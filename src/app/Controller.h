@@ -8,6 +8,7 @@
 #include <QJsonArray>
 #include <QCoreApplication>
 #include <QObject>
+#include <QSet>
 #include <QThread>
 #include <QTimer>
 #include <QVariantMap>
@@ -286,6 +287,8 @@ class Controller : public QObject {
     QList<PendingClip> pendingClips_;
     QVector<qint64> markers_;                   // epoch ms of markers still inside the buffer
     QHash<QString, QString> clipGames_;         // saved path -> game name, for clips still being trimmed
+    QSet<QString> discordQueue_;                // new clips to send to Discord once imported
+    QHash<QString, double> discordDurations_;   // clip -> duration, while an automatic Discord send is running
     QHash<QString, QVariantList> clipMarkers_; // saved path -> marker offsets from the clip end (s)
     bool micMuted_ = false;
     QTimer pttTimer_;
@@ -294,6 +297,10 @@ class Controller : public QObject {
     QString organizeClipFile(const QString &path, const QString &gameName);
     QString currentGameName() const;
     void clipImported(QVariantMap data);
+    void autoDiscord(const QVariantMap &clip);
+    void shrinkForDiscord(const QString &clip, double maxMB);
+    // automatic: sent right after saving (quiet start, clickable result); removeAfter: file is a temporary copy.
+    void uploadToDiscord(QString file, QString clip, bool automatic, bool removeAfter);
     void setMicMuted(bool muted);
     void micKey();
     void configureHotkeys();

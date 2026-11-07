@@ -194,6 +194,25 @@ void ClipModel::fetchMore(const QModelIndex &p) {
     rows_ += page;
     endInsertRows();
 }
+QVariantList ClipModel::playlist() const {
+    QVariantList list;
+    QSqlQuery q(db_);
+    q.prepare("SELECT * FROM clips" + where() + " ORDER BY created ASC");
+    q.bindValue(":search", pattern());
+    if (!game_.isNull())
+        q.bindValue(":game", game_);
+    if (!q.exec())
+        return list;
+    while (q.next()) {
+        QVariantMap m;
+        auto r = q.record();
+        for (int i = 0; i < r.count(); ++i)
+            m[r.fieldName(i)] = q.value(i);
+        if (QFileInfo::exists(m["path"].toString()))
+            list << m;
+    }
+    return list;
+}
 QVariantMap ClipModel::get(int i) const {
     return i >= 0 && i < rows_.size() ? rows_[i] : QVariantMap{};
 }

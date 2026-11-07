@@ -72,6 +72,7 @@ ColumnLayout {
         draft.fileTemplate = fileTemplate.text;
         draft.gameFolders = gameFolders.checked;
         draft.discordWebhook = discordWebhook.text.trim();
+        draft.discordAuto = discordAuto.checked;
         draft.cleanupGB = Number(cleanupGB.text);
         draft.cleanupDays = Number(cleanupDays.text);
         appController.apply(draft);
@@ -583,6 +584,12 @@ ColumnLayout {
                 text: settings.draft.discordWebhook
                 placeholderText: "https://discord.com/api/webhooks/…"
                 Layout.fillWidth: true
+            }
+            CCheck {
+                id: discordAuto
+                enabled: discordWebhook.text.trim().length > 0
+                text: "Envoyer automatiquement chaque nouveau clip sur Discord (compressé si trop lourd)"
+                checked: settings.draft.discordAuto
             }
             CCheck {
                 id: gameFolders

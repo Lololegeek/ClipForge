@@ -125,6 +125,14 @@ Controller::Controller(QString runtime, QString data, QString tools, bool test)
         emit changed();
     });
     connect(&jobs_, &MediaJobs::imported, this, &Controller::clipImported);
+    connect(&jobs_, &MediaJobs::shrunk, this, [this](QString source, QString copy, bool ok) {
+        if (ok)
+            uploadToDiscord(copy, source, true, true);
+        else {
+            discordDurations_.remove(source);
+            notify("Envoi Discord automatique : compression du clip impossible.", true);
+        }
+    });
     connect(&jobs_, &MediaJobs::snapshotReady, this, [this](QString p) {
         QApplication::clipboard()->setImage(QImage(p));
         notify("Image enregistrée et copiée : " + QFileInfo(p).fileName());

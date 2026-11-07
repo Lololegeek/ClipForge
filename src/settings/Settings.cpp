@@ -52,6 +52,7 @@ QJsonObject Settings::json() const {
     STR(onboarded);
     STR(fileTemplate);
     STR(discordWebhook);
+    STR(discordAuto);
     STR(gameFolders);
     STR(profiles);
 #undef STR
@@ -93,6 +94,7 @@ Settings Settings::fromJson(const QJsonObject &o) {
     B(separateTracks);
     B(pushToTalk);
     B(saveSound);
+    B(discordAuto);
     B(closeToTray);
     B(autoCapture);
     B(startMinimized);
@@ -152,7 +154,8 @@ const QStringList &Settings::appKeys() {
     static const QStringList k{"clips",       "temporary",  "closeToTray", "autoCapture", "startMinimized",
                                "gameOverlay", "autoUpdate", "alwaysReplay", "onboarded",  "profiles",
                                "cleanupGB",   "cleanupDays", "saveKey",      "markerKey",  "micKey",
-                               "pushToTalk",  "saveSound", "fileTemplate", "gameFolders", "discordWebhook"};
+                               "pushToTalk",  "saveSound", "fileTemplate", "gameFolders", "discordWebhook",
+                               "discordAuto"};
     return k;
 }
 Settings Settings::load(const QString &p) {

@@ -117,6 +117,8 @@ void Controller::clipSaved(QString p) {
     const auto clip = pendingClips_.isEmpty() ? PendingClip{0, QDateTime::currentMSecsSinceEpoch(), game_}
                                               : pendingClips_.takeFirst();
     p = organizeClipFile(p, clip.game);
+    if (settings_.discordAuto && !settings_.discordWebhook.trimmed().isEmpty())
+        discordQueue_.insert(QFileInfo(p).absoluteFilePath());
     const double window = clip.keep > 0 ? clip.keep : settings_.replaySeconds;
     QVariantList offsets;
     for (auto m : markers_)
@@ -138,6 +140,8 @@ void Controller::clipSaved(QString p) {
     emit changed();
 }
 void Controller::clipImported(QVariantMap data) {
+    if (discordQueue_.remove(QFileInfo(data["path"].toString()).absoluteFilePath()))
+        autoDiscord(data);
     const auto it = clipMarkers_.find(QFileInfo(data["path"].toString()).absoluteFilePath());
     if (it == clipMarkers_.end()) {
         library_.upsert(data);

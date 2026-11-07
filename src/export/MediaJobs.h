@@ -25,6 +25,8 @@ class MediaJobs : public QObject {
     // Keeps only the last `seconds` of a saved replay (stream copy, so the cut lands on a keyframe).
     void trimTail(QString path, double seconds);
     void snapshot(QString source, double seconds, QString destination);
+    // Re-encodes a copy of a clip under maxMB (for Discord). Runs beside exports; emits shrunk().
+    void shrink(QString source, double seconds, double maxMB, QString destination);
     bool busy() const {
         return exporter_ != nullptr;
     }
@@ -43,6 +45,7 @@ class MediaJobs : public QObject {
     void exportBusy(bool value);
     void trimmed(QString path);
     void snapshotReady(QString path);
+    void shrunk(QString source, QString destination, bool ok);
 
   private:
     struct Import {

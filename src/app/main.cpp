@@ -161,6 +161,16 @@ int main(int argc, char **argv) {
                         QMetaObject::invokeMethod(d, "openFor", Q_ARG(QVariant, "c:\games\demo.exe"),
                                                   Q_ARG(QVariant, "Firefighting Simulator: Ignite"));
                 });
+            if (qEnvironmentVariableIsSet("CF_SLIDESHOW")) // play, recap or summary
+                QTimer::singleShot(600, window, [window] {
+                    QMetaObject::invokeMethod(window, "startSlideshow");
+                    const QString step = qEnvironmentVariable("CF_SLIDESHOW");
+                    auto show = window->findChild<QObject *>("slideshow");
+                    if (show && step != "play")
+                        QMetaObject::invokeMethod(show, "end");
+                    if (show && step == "summary")
+                        show->setProperty("statPage", show->property("slides").toList().size());
+                });
             if (qEnvironmentVariableIsSet("CF_UPDATE_DIALOG"))
                 QTimer::singleShot(1200, window, [window] { QMetaObject::invokeMethod(window, "previewUpdate"); });
             QTimer::singleShot(2200, &app, [window, data] { window->grabWindow().save(data + "/ui.png"); });

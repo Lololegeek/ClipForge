@@ -349,6 +349,31 @@ void MediaJobs::trimTail(QString path, double seconds) {
     p->start(tool("ffmpeg"), {"-v", "error", "-nostdin", "-y", "-sseof", QString::number(-seconds, 'f', 3), "-i",
                               path, "-map", "0", "-c", "copy", "-movflags", "+faststart", temp});
 }
+void MediaJobs::shrink(QString source, double seconds, double maxMB, QString dest) {
+    // Same budget as the "Discord" export preset: 4 % container margin, 96 kbit/s audio, lower resolution when tight.
+    const int kbps = std::max(150, int(maxMB * 8192 * 0.96 / std::max(0.5, seconds)) - 96);
+    const int height = kbps < 1500 ? 480 : kbps < 3500 ? 720 : 1080;
+    auto p = new QProcess(this);
+    auto done = [this, p, source, dest](bool ok) {
+        ok = ok && QFileInfo(dest).size() > 0;
+        if (!ok)
+            QFile::remove(dest);
+        emit shrunk(source, dest, ok);
+        p->deleteLater();
+    };
+    connect(p, &QProcess::errorOccurred, this, [done](QProcess::ProcessError e) {
+        if (e == QProcess::FailedToStart)
+            done(false);
+    });
+    connect(p, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
+            [done](int code, QProcess::ExitStatus status) { done(code == 0 && status == QProcess::NormalExit); });
+    p->start(tool("ffmpeg"),
+             {"-v", "error", "-nostdin", "-y", "-i", source, "-map", "0:v:0", "-map", "0:a:0?", "-vf",
+              QString("fps=30,scale=-2:'min(ih,%1)':flags=lanczos").arg(height), "-c:v", "libx264", "-preset", "fast",
+              "-b:v", QString("%1k").arg(kbps), "-maxrate", QString("%1k").arg(kbps * 3 / 2), "-bufsize",
+              QString("%1k").arg(kbps * 2), "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "96k", "-threads", "4",
+              "-movflags", "+faststart", dest});
+}
 void MediaJobs::snapshot(QString source, double seconds, QString dest) {
     QDir().mkpath(QFileInfo(dest).absolutePath());
     auto p = new QProcess(this);

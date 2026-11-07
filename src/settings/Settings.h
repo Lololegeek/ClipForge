@@ -17,6 +17,7 @@ struct Settings {
     bool separateTracks = true, pushToTalk = false, saveSound = true;
     QString fileTemplate; // empty = keep OBS's own name; placeholders {jeu} {date} {heure}
     QString discordWebhook;
+    bool discordAuto = false; // send every new clip to the webhook
     bool gameFolders = false;
     QJsonObject profiles;
     static Settings defaults();

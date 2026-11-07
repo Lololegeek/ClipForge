@@ -49,6 +49,8 @@ class ClipModel : public QAbstractListModel {
     // Moves the oldest non-favourite clips to the recycle bin until both limits hold (0 = no limit).
     int cleanup(qint64 maxBytes, int maxDays);
     Q_INVOKABLE QVariantMap get(int index) const;
+    // Every clip matching the current filter whose file still exists, oldest first (slideshow).
+    Q_INVOKABLE QVariantList playlist() const;
     Q_INVOKABLE bool favorite(int id, bool value);
     Q_INVOKABLE bool rename(int id, QString name);
     Q_INVOKABLE bool tags(int id, QString tags);

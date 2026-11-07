@@ -22,6 +22,7 @@
 #include <QSystemTrayIcon>
 #include <QTimer>
 #include <QUrl>
+#include <QUuid>
 namespace cf {
 void Controller::scan() {
     if (jobs_.pendingImports() > 0)
@@ -166,36 +167,81 @@ void Controller::copyFile(QString p) {
     QApplication::clipboard()->setMimeData(mime);
     notify("Fichier copié : colle-le directement dans Discord.");
 }
+// Webhooks take up to 25 MB on most servers; some (no boost) stop at 10 MB, which a 413 reply tells us.
+static constexpr qint64 kDiscordBytes = 25LL * 1024 * 1024, kDiscordSmallBytes = 10LL * 1024 * 1024;
+static bool validHook(const QString &hook) {
+    return hook.startsWith("https://discord.com/api/webhooks/") || hook.startsWith("https://discordapp.com/api/webhooks/");
+}
 void Controller::sendToDiscord(QString p) {
+    uploadToDiscord(p, p, false, false);
+}
+void Controller::autoDiscord(const QVariantMap &clip) {
+    const QString p = clip["path"].toString();
+    if (!validHook(stored().discordWebhook.trimmed())) {
+        notify("Envoi Discord automatique : le webhook dans les réglages n'est pas valide.", true);
+        return;
+    }
+    discordDurations_[p] = clip["duration"].toDouble();
+    if (QFileInfo(p).size() <= kDiscordBytes)
+        uploadToDiscord(p, p, true, false);
+    else
+        shrinkForDiscord(p, 24);
+}
+void Controller::shrinkForDiscord(const QString &clip, double maxMB) {
+    // A smaller copy is made in the temp folder, sent, then deleted. The clip itself is untouched.
+    const QString temp = QDir::tempPath() + "/clipforge-discord-" + QUuid::createUuid().toString(QUuid::Id128) + ".mp4";
+    jobs_.shrink(clip, discordDurations_.value(clip), maxMB, temp);
+}
+void Controller::uploadToDiscord(QString p, QString clip, bool automatic, bool removeAfter) {
     const QString hook = stored().discordWebhook.trimmed();
-    if (!hook.startsWith("https://discord.com/api/webhooks/") && !hook.startsWith("https://discordapp.com/api/webhooks/")) {
+    if (!validHook(hook)) {
         notify("Renseigne d'abord un webhook Discord valide dans les réglages.", true);
+        if (removeAfter)
+            QFile::remove(p);
         return;
     }
     auto *file = new QFile(p);
-    if (!file->exists() || file->size() > 25LL * 1024 * 1024 || !file->open(QIODevice::ReadOnly)) {
-        notify(file->exists() && file->size() > 25LL * 1024 * 1024 ? "Clip trop lourd pour Discord (25 Mo max) : exporte-le en plus petit."
-                                                                     : "Fichier introuvable.", true);
+    if (!file->exists() || file->size() > kDiscordBytes || !file->open(QIODevice::ReadOnly)) {
+        notify(file->exists() && file->size() > kDiscordBytes ? "Clip trop lourd pour Discord (25 Mo max) : exporte-le avec le préréglage Discord."
+                                                              : "Fichier introuvable.", true);
         delete file;
+        if (removeAfter)
+            QFile::remove(p);
         return;
     }
+    const qint64 bytes = file->size();
     auto *multi = new QHttpMultiPart(QHttpMultiPart::FormDataType);
     QHttpPart part;
     part.setHeader(QNetworkRequest::ContentTypeHeader, "video/mp4");
     part.setHeader(QNetworkRequest::ContentDispositionHeader,
-                   QString("form-data; name=\"file\"; filename=\"%1\"").arg(QFileInfo(p).fileName()));
+                   QString("form-data; name=\"file\"; filename=\"%1\"").arg(QFileInfo(clip).completeBaseName() + ".mp4"));
     part.setBodyDevice(file);
     file->setParent(multi);
+    if (removeAfter) // ~QFile has closed the handle by the time destroyed() fires
+        connect(file, &QObject::destroyed, [p] { QFile::remove(p); });
     multi->append(part);
     auto *net = new QNetworkAccessManager(this);
     auto *reply = net->post(QNetworkRequest(QUrl(hook)), multi);
     multi->setParent(reply);
-    notify("Envoi sur Discord…");
-    connect(reply, &QNetworkReply::finished, this, [this, reply, net] {
-        if (reply->error() == QNetworkReply::NoError)
-            notify("Clip envoyé sur Discord.");
-        else
-            notify("Envoi Discord échoué : " + reply->errorString(), true);
+    if (!automatic)
+        notify("Envoi sur Discord…");
+    connect(reply, &QNetworkReply::finished, this, [this, reply, net, clip, automatic, bytes] {
+        const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (automatic && status == 413 && bytes > kDiscordSmallBytes) {
+            // This server only takes 10 MB: retry with a smaller copy.
+            shrinkForDiscord(clip, 9.5);
+        } else if (reply->error() == QNetworkReply::NoError) {
+            discordDurations_.remove(clip);
+            notify(automatic ? "Clip envoyé sur Discord : " + QFileInfo(clip).fileName() + " (cliquez pour l'ouvrir)"
+                             : "Clip envoyé sur Discord.");
+            if (automatic)
+                notifyClip_ = clip;
+        } else {
+            discordDurations_.remove(clip);
+            notify(status == 413 ? "Envoi Discord échoué : clip trop lourd pour ce serveur."
+                                 : "Envoi Discord échoué : " + reply->errorString(),
+                   true);
+        }
         reply->deleteLater();
         net->deleteLater();
     });
