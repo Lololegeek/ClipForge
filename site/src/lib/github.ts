@@ -13,6 +13,7 @@ const releaseSchema = z.object({
       name: z.string(),
       size: z.number(),
       browser_download_url: z.string().url(),
+      digest: z.string().nullable().optional(),
     }),
   ),
 });

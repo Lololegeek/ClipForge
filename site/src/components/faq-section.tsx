@@ -23,6 +23,10 @@ const FAQ = [
     a: "Non. Le tampon vit dans la RAM (512 Mo maximum par défaut, réglable) et rien n’est écrit tant que tu n’appuies pas sur F8. À haut débit, la limite mémoire peut raccourcir la durée conservée.",
   },
   {
+    q: "Pourquoi Windows dit « Windows a protégé votre PC » ?",
+    a: "ClipForge n’est pas signé : un certificat de signature coûte plusieurs centaines d’euros par an, trop pour un projet gratuit. Windows (SmartScreen) prévient donc pour tout programme qu’il ne connaît pas encore. Clique sur « Informations complémentaires », puis « Exécuter quand même ». Le code est public sur GitHub, l’empreinte SHA256 de l’installeur est affichée sur la page Télécharger, et l’alerte s’efface quand assez de personnes ont installé la même version.",
+  },
+  {
     q: "Puis-je le compiler moi-même ?",
     a: "Oui. En plus de l’installateur et de la version portable, les sources sont disponibles sur GitHub. Les scripts PowerShell téléchargent les dépendances dans un dossier isolé et produisent un dossier portable.",
   },

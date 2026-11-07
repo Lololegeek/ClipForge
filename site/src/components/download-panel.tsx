@@ -5,9 +5,11 @@ import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Download, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { CodeBlock } from "@/components/code-block";
 import { Github, Windows } from "@/components/icons";
 import { Section, SectionTitle } from "@/components/sections";
+import { SmartScreenDialog } from "@/components/smartscreen-dialog";
 import { Button } from "@/components/ui/button";
 import { clearSponsor, getSponsor, track } from "@/lib/analytics";
 import { formatBytes } from "@/lib/format";
@@ -22,9 +24,11 @@ export function DownloadPanel() {
     staleTime: 60_000,
   });
   const installer = data ? pickInstaller(data) : null;
+  const [help, setHelp] = useState(false);
 
   return (
     <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
+      <SmartScreenDialog open={help} onOpenChange={setHelp} />
       <div className="min-w-0">
         {isPending && (
           <div
@@ -49,7 +53,10 @@ export function DownloadPanel() {
                       sponsor: getSponsor(),
                       version: data.tag_name,
                     });
-                    if (installer) clearSponsor();
+                    if (installer) {
+                      clearSponsor();
+                      setHelp(true);
+                    }
                   }}
                 >
                   {installer ? <Download /> : <Windows />}{" "}
@@ -78,6 +85,11 @@ export function DownloadPanel() {
                 ? formatDistanceToNow(new Date(data.published_at), { addSuffix: true, locale: fr })
                 : "récemment"}
             </p>
+            {installer?.digest?.startsWith("sha256:") && (
+              <p className="text-muted mt-2 text-xs break-all">
+                SHA256 : <span className="font-mono">{installer.digest.slice(7)}</span>
+              </p>
+            )}
           </div>
         )}
 
