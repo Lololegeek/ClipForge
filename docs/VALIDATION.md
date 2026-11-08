@@ -1,5 +1,9 @@
 # Validation
 
+## Manual gameplay checks, 8 November 2026
+
+Manual testing by the maintainer with real games: Valorant (Vanguard anti-cheat) and Fortnite (Easy Anti-Cheat). The replay hotkey worked in exclusive fullscreen, and the notification overlay was visible there. Sessions ran for at least five hours with no problems reported. Peak RAM stayed at or below about 300 MB, and CPU load was negligible. These are maintainer observations, not instrumented measurements; no exact figures were recorded. Windows 10, a clean VM, NVIDIA/Intel hardware and device-loss recovery were not covered by this entry.
+
 ## Software fallback checks, 20 October 2026
 
 Release build and CTest passed. `FallbackTests` passed 4/4 with no skips on the Radeon RX 6600 host. An injected OBS encoder-stop signal replaced the running AMD encoder with x264, then a real window replay was saved and fully decoded by FFmpeg. An unavailable AV1 codec also fell back to software H.264 at startup. NVIDIA hardware and the 30-second save-timeout path have not been exercised on this host.
