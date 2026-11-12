@@ -7,8 +7,8 @@
 [Setup]
 AppId={{C38E01B3-9388-4B47-ACE2-04EB912F4160}
 AppName=ClipForge
-AppVersion={#AppVersion} Beta Test 22
-AppVerName=ClipForge 1.0 Beta Test 22
+AppVersion={#AppVersion}
+AppVerName=ClipForge 1.0.0
 AppPublisher=ClipForge contributors
 AppPublisherURL=https://github.com/Lololegeek/ClipForge
 AppSupportURL=https://github.com/Lololegeek/ClipForge/issues
