@@ -68,7 +68,8 @@ void ObsEngine::start(Settings s) {
         // DXGI duplication returns black frames (cursor only) when the screen is driven by another GPU than the
         // one OBS renders on, or while a game runs fullscreen; Windows Graphics Capture has neither limit.
         bool wgc = true;
-        if (auto props = obs_get_source_properties(obs_get_latest_input_type_id("monitor_capture"))) {
+        const char *monitorId = obs_get_latest_input_type_id("monitor_capture");
+        if (auto props = monitorId ? obs_get_source_properties(monitorId) : nullptr) {
             if (auto methods = obs_properties_get(props, "method"))
                 for (size_t i = 0; i < obs_property_list_item_count(methods); ++i)
                     if (obs_property_list_item_int(methods, i) == 2)
@@ -82,7 +83,8 @@ void ObsEngine::start(Settings s) {
         obs_data_set_int(data, "priority", 1);
         if (s.mode == "window") {
             bool wgc = true;
-            auto props = obs_get_source_properties(obs_get_latest_input_type_id("window_capture"));
+            const char *windowId = obs_get_latest_input_type_id("window_capture");
+            auto props = windowId ? obs_get_source_properties(windowId) : nullptr;
             if (props) {
                 auto methods = obs_properties_get(props, "method");
                 if (methods)

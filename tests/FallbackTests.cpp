@@ -38,6 +38,10 @@ class FallbackTests : public QObject {
         package_ = QDir(package_).absolutePath();
         const auto binaries = QDir::toNativeSeparators(package_ + "/obs/bin/64bit");
         SetDllDirectoryW(reinterpret_cast<LPCWSTR>(binaries.utf16()));
+        // The package keeps shared DLLs (libcurl, FFmpeg...) at its root, next to ClipForge.exe. OBS loads plugins with
+        // the default search dirs, which do not include PATH, so the root must be added for win-capture / obs-ffmpeg.
+        const auto root = QDir::toNativeSeparators(package_);
+        AddDllDirectory(reinterpret_cast<LPCWSTR>(root.utf16()));
         QVERIFY(QDir::setCurrent(binaries));
         fixture_.start(package_ + "/ClipForgeFixture.exe");
         QVERIFY(fixture_.waitForStarted());
