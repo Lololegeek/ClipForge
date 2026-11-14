@@ -77,6 +77,9 @@ void ObsEngine::start(Settings s) {
             obs_properties_destroy(props);
         }
         obs_data_set_int(data, "method", wgc ? 2 : 1);
+        // On an HDR-flagged monitor (or with Windows HDR on) every display capture comes out fully black unless
+        // forced to SDR, with either method.
+        obs_data_set_bool(data, "force_sdr", true);
         captureMethod_ = wgc ? "Écran · Windows Graphics Capture" : "Écran · DXGI (repli WGC indisponible)";
     } else {
         obs_data_set_string(data, "window", s.target.toUtf8().constData());

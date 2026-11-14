@@ -10,6 +10,15 @@ export const metadata: Metadata = {
 
 const releases = [
   {
+    version: "1.0.1",
+    date: "14 novembre 2026",
+    summary: "Correction des clips entièrement noirs.",
+    changes: [
+      "Correction : sur certains écrans (HDR ou détectés comme tels), les clips et enregistrements d’écran étaient entièrement noirs. La capture est maintenant forcée en couleurs normales (SDR).",
+    ],
+    url: "https://github.com/Lololegeek/ClipForge/releases/tag/v1.0.1",
+  },
+  {
     version: "1.0.0",
     date: "12 novembre 2026",
     summary: "La première version officielle : plus légère pour ta carte graphique, avec diaporama, envoi Discord et mises à jour allégées.",
