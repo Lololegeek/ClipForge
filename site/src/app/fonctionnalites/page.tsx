@@ -5,7 +5,7 @@ import { readRepoDoc } from "@/lib/docs";
 export const metadata: Metadata = {
   title: "Fonctionnalités",
   description:
-    "Périmètre exact de ClipForge 0.1 : ce qui fonctionne, ce qui est limité, ce qui manque.",
+    "Périmètre exact de ClipForge 1.0 : ce qui fonctionne, ce qui est limité, ce qui manque.",
 };
 
 export default async function FeaturesPage() {
@@ -13,7 +13,7 @@ export default async function FeaturesPage() {
   const capture = await readRepoDoc("docs/CAPTURE.md");
   return (
     <div className="mx-auto w-[min(60rem,100%-2rem)] py-20 sm:w-[min(60rem,100%-3rem)] sm:py-28">
-      <p className="text-accent mb-4 font-mono text-sm tracking-widest uppercase">Version 0.1</p>
+      <p className="text-accent mb-4 font-mono text-sm tracking-widest uppercase">Version 1.0</p>
       <Markdown>{features}</Markdown>
       <div className="border-line mt-20 border-t pt-16">
         <Markdown>{capture}</Markdown>

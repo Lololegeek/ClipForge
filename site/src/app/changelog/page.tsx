@@ -10,6 +10,27 @@ export const metadata: Metadata = {
 
 const releases = [
   {
+    version: "1.0.0",
+    date: "12 novembre 2026",
+    summary: "La première version officielle : plus légère pour ta carte graphique, avec diaporama, envoi Discord et mises à jour allégées.",
+    changes: [
+      "Résolution native de ton écran par défaut, curseur affiché ou non.",
+      "Raccourcis avec Ctrl / Alt / Maj, touche pour poser un repère, push-to-talk pour le micro.",
+      "Pistes audio séparées (jeu et micro) dans les clips.",
+      "Réglages par jeu : chaque jeu peut avoir sa durée, sa qualité et son dossier.",
+      "Charge de la carte graphique réduite : l’encodage matériel (AMD / NVIDIA) demande environ 40 % de travail en moins.",
+      "Reprise automatique après une mise en veille.",
+      "Diaporama de tes clips avec un récap à la fin, à enregistrer en image ou à exporter en vidéo MP4.",
+      "Envoi vers Discord d’un clic, ou automatiquement après chaque clip.",
+      "Noms de fichiers personnalisés ({jeu}, {date}, {heure}) et un dossier par jeu.",
+      "Dossier surveillé : les vidéos ajoutées dedans apparaissent toutes seules ; glisser-déposer pour importer.",
+      "Export : filigrane, volume égalisé et bouton pour annuler un export.",
+      "Mises à jour plus légères : seuls les fichiers modifiés sont téléchargés.",
+      "Nouvel écran d’accueil, notifications cliquables, rapport de diagnostic en un clic et nettoyage automatique des vieux clips.",
+    ],
+    url: "https://github.com/Lololegeek/ClipForge/releases/tag/v1.0.0",
+  },
+  {
     version: "0.9.0",
     date: "28 octobre 2026",
     summary: "Une interface plus nette, et un mode pour simplement regarder ses clips.",

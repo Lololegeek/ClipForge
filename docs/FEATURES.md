@@ -1,4 +1,4 @@
-# Scope of 0.3
+# Périmètre de la 1.0
 
 | Area | Operational implementation | Limits / remaining work |
 |---|---|---|
