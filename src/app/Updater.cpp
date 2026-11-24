@@ -3,6 +3,7 @@
 #include <QCryptographicHash>
 #include <QDesktopServices>
 #include <QDir>
+#include <QDirIterator>
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -108,6 +109,11 @@ void Updater::check(bool manual, bool download) {
         return;
     manual_ = manual;
     download_ = download;
+    // A previous update that could not be applied was rolled back by the apply script: tell the user once.
+    if (QFile::exists(data_ + "/update-failed.txt")) {
+        QFile::remove(data_ + "/update-failed.txt");
+        emit message("La dernière mise à jour n'a pas pu s'installer : l'ancienne version a été remise en place.", true);
+    }
     setState("checking");
     auto reply = net_->get(request(QUrl(latestUrl())));
     connect(reply, &QNetworkReply::finished, this, [this, reply] {
@@ -176,6 +182,9 @@ void Updater::startFullDownload() {
     progress_ = 0;
     downloadSize_ = installerSize_;
     setState("downloading");
+    // The installer is only trusted when its published SHA-256 is known: without it there is nothing to verify.
+    if (!digest_.startsWith("sha256:") || digest_.size() != 7 + 64)
+        return fail("Mise à jour refusée : l'empreinte de sécurité de l'installateur n'est pas publiée.");
     auto out = std::make_shared<QFile>(file_ + ".part");
     if (!out->open(QIODevice::WriteOnly | QIODevice::Truncate))
         return fail("Impossible d'enregistrer la mise à jour.");
@@ -201,7 +210,7 @@ void Updater::startFullDownload() {
             out->remove();
             return fail("Installateur téléchargé invalide.");
         }
-        if (digest_.startsWith("sha256:") && hash->result().toHex() != digest_.mid(7).toLatin1()) {
+        if (hash->result().toHex() != digest_.mid(7).toLatin1()) {
             out->remove();
             return fail("Somme de contrôle de la mise à jour incorrecte.");
         }
@@ -364,36 +373,79 @@ void Updater::downloadNextBlob(size_t index) {
     });
 }
 bool Updater::launchDelta() {
-    const QString stage = QDir::toNativeSeparators(QDir(data_ + "/update/stage").absolutePath());
+    const QDir stageDir(data_ + "/update/stage");
+    const QString stage = QDir::toNativeSeparators(stageDir.absolutePath());
     const QString app = QDir::toNativeSeparators(QCoreApplication::applicationDirPath());
+    const QDir appDir(QCoreApplication::applicationDirPath());
+    const QString backup = data_ + "/update/backup";
+    // Back up every file the update is about to replace, and note the ones it adds, so that a failed copy can be
+    // undone completely: the install is either fully updated or exactly as it was.
+    QDir(backup).removeRecursively();
+    QDir().mkpath(backup);
+    QStringList added;
+    QDirIterator it(stage, QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        it.next();
+        const QString rel = stageDir.relativeFilePath(it.filePath());
+        const QString target = appDir.absoluteFilePath(rel);
+        if (QFileInfo::exists(target)) {
+            const QString copy = backup + "/" + rel;
+            QDir().mkpath(QFileInfo(copy).absolutePath());
+            if (!QFile::copy(target, copy)) {
+                qWarning().noquote() << "update backup failed for" << rel;
+                QDir(backup).removeRecursively();
+                return false;
+            }
+        } else {
+            added << QDir::toNativeSeparators(rel);
+        }
+    }
+    QFile list(data_ + "/update/newfiles.txt");
+    if (!list.open(QIODevice::WriteOnly | QIODevice::Truncate))
+        return false;
+    list.write(added.join("\r\n").toLocal8Bit());
+    list.close();
     const QString script = QDir::toNativeSeparators(QDir::temp().absoluteFilePath("clipforge-apply.cmd"));
     QFile f(script);
     if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate))
         return false;
-    // Waits for this process to exit (files are locked while it runs), copies the staged files, relaunches.
+    // Waits for this process to exit (files are locked while it runs), copies the staged files, relaunches. If the
+    // copy keeps failing, the backup is put back and the files the update added are removed.
     f.write("@echo off\r\n"
-            "set PID=%~1\r\nset STAGE=%~2\r\nset APP=%~3\r\nset DATA=%~4\r\nset N=0\r\n"
+            "set PID=%~1\r\nset STAGE=%~2\r\nset APP=%~3\r\nset DATA=%~4\r\nset BK=%~5\r\nset N=0\r\n"
             ":wait\r\n"
             "tasklist /FI \"PID eq %PID%\" 2>NUL | \"%SystemRoot%\\System32\\find.exe\" \"%PID%\" >NUL\r\n"
             "if not errorlevel 1 (ping -n 2 127.0.0.1 >NUL & goto wait)\r\n"
             ":copy\r\n"
             "xcopy /E /Y /Q \"%STAGE%\\*\" \"%APP%\\\" >NUL && goto done\r\n"
             "set /a N+=1\r\n"
-            "if %N% GEQ 10 goto done\r\n"
+            "if %N% GEQ 10 goto rollback\r\n"
             "ping -n 3 127.0.0.1 >NUL\r\n"
             "goto copy\r\n"
+            ":rollback\r\n"
+            "set N=0\r\n"
+            ":restore\r\n"
+            "xcopy /E /Y /Q \"%BK%\\*\" \"%APP%\\\" >NUL && goto restored\r\n"
+            "set /a N+=1\r\n"
+            "if %N% GEQ 10 goto restored\r\n"
+            "ping -n 3 127.0.0.1 >NUL\r\n"
+            "goto restore\r\n"
+            ":restored\r\n"
+            "for /f \"usebackq delims=\" %%F in (\"%DATA%\\update\\newfiles.txt\") do del /f /q \"%APP%\\%%F\" >NUL 2>&1\r\n"
+            "echo failed> \"%DATA%\\update-failed.txt\"\r\n"
             ":done\r\n"
             "rd /s /q \"%STAGE%\" >NUL 2>&1\r\n"
+            "rd /s /q \"%BK%\" >NUL 2>&1\r\n"
             "start \"\" \"%APP%\\ClipForge.exe\" --headless --data-dir \"%DATA%\"\r\n"
             "exit /b 0\r\n");
     f.close();
     QProcess p;
     p.setProgram(qEnvironmentVariable("ComSpec", "cmd.exe"));
     const QString data = QDir::toNativeSeparators(QDir(data_).absolutePath());
-    p.setNativeArguments(QString("/c \"\"%1\" %2 \"%3\" \"%4\" \"%5\"\"")
+    p.setNativeArguments(QString("/c \"\"%1\" %2 \"%3\" \"%4\" \"%5\" \"%6\"\"")
                              .arg(script)
                              .arg(QCoreApplication::applicationPid())
-                             .arg(stage, app, data));
+                             .arg(stage, app, data, QDir::toNativeSeparators(QDir(backup).absolutePath())));
     p.setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments *a) { a->flags |= CREATE_NO_WINDOW; });
     return p.startDetached();
 }
